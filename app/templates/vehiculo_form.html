@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="form-container">
+        <a href="/mis-vehiculos" class="back-link">← Volver a mis vehículos</a>
+        <h1>{{ 'Editar' if vehiculo else 'Registrar' }} Vehículo</h1>
+
+        {% if error %}
+        <div class="alert alert-error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ '/mis-vehiculos/' + vehiculo.id|string + '/editar' if vehiculo else '/mis-vehiculos/crear' }}" class="admin-form">
+            <div class="form-group">
+                <label for="placa">Placa *</label>
+                <input
+                    type="text"
+                    id="placa"
+                    name="placa"
+                    value="{{ vehiculo.placa if vehiculo else '' }}"
+                    required
+                    minlength="5"
+                    maxlength="10"
+                    placeholder="Ej: ABC123"
+                    style="text-transform: uppercase;"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="tipo">Tipo de vehículo *</label>
+                <select id="tipo" name="tipo" required>
+                    <option value="carro" {{ 'selected' if vehiculo and vehiculo.tipo == 'carro' else '' }}>Carro</option>
+                    <option value="moto" {{ 'selected' if vehiculo and vehiculo.tipo == 'moto' else '' }}>Moto</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="marca">Marca</label>
+                <input
+                    type="text"
+                    id="marca"
+                    name="marca"
+                    value="{{ vehiculo.marca if vehiculo and vehiculo.marca else '' }}"
+                    maxlength="50"
+                    placeholder="Ej: Toyota, Chevrolet, Yamaha"
+                >
+            </div>
+
+            <div class="form-actions">
+                <a href="/mis-vehiculos" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    {{ 'Guardar Cambios' if vehiculo else 'Registrar Vehículo' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+
+    .form-container {
+        max-width: 500px;
+        margin: 0 auto;
+        background: white;
+        padding: 2rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-container h1 {
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+    }
+
+    .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--color-text);
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .alert {
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .alert-error {
+        background-color: #fef2f2;
+        color: var(--color-danger);
+        border: 1px solid #fecaca;
+    }
+</style>
+{% endblock %}

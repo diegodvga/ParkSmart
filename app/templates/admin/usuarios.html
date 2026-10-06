@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <h1>Gestión de Usuarios</h1>
+    <p class="page-description">Usuarios registrados en el sistema</p>
+
+    {% if usuarios %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Fecha de Registro</th>
+                    <th>Vehículos</th>
+                    <th>Reservas</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in usuarios %}
+                {% set u = item.usuario %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td><strong>{{ u.nombre }}</strong></td>
+                    <td>{{ u.correo }}</td>
+                    <td>{{ u.fecha_registro.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ item.total_vehiculos }}</td>
+                    <td>{{ item.total_reservas }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No hay usuarios registrados.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-description {
+        color: var(--color-text-light);
+        margin-bottom: 2rem;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th {
+        background-color: var(--color-background);
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--color-text-light);
+        text-transform: uppercase;
+    }
+
+    .data-table tr:hover {
+        background-color: var(--color-background);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .empty-state p {
+        color: var(--color-text-light);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge">Sistema de Gestión de Parqueaderos</div>
+        <h1>Bienvenido a <span class="highlight">ParkSmart</span></h1>
+        <p class="hero-description">
+            El sistema inteligente para gestionar parqueaderos y reservas de espacios.
+            Consulta disponibilidad, registra tu vehículo y reserva tu lugar en segundos.
+        </p>
+        <div class="hero-actions">
+            <a href="/parqueaderos" class="btn btn-primary btn-lg">
+                <span class="btn-icon">P</span>
+                Consultar Parqueaderos
+            </a>
+            {% if request.session.get('usuario_id') %}
+                <a href="/mis-reservas" class="btn btn-secondary btn-lg">
+                    <span class="btn-icon">R</span>
+                    Mis Reservas
+                </a>
+            {% else %}
+                <a href="/registro" class="btn btn-secondary btn-lg">
+                    <span class="btn-icon">+</span>
+                    Crear Cuenta
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <h2>¿Por qué ParkSmart?</h2>
+        <p class="section-description">La solución completa para la gestión de parqueaderos</p>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">P</div>
+                <h3>Reserva Fácil</h3>
+                <p>Selecciona el parqueadero, el espacio y listo. Sin llamadas ni mensajes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">D</div>
+                <h3>Disponibilidad en Tiempo Real</h3>
+                <p>Consulta qué espacios están disponibles antes de llegar.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">G</div>
+                <h3>Gestión Centralizada</h3>
+                <p>Administra parqueaderos, espacios, reservas y usuarios desde un solo lugar.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">E</div>
+                <h3>Estadísticas</h3>
+                <p>Reportes y gráficos para tomar mejores decisiones.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="quick-access">
+    <div class="container">
+        <h2>Acceso Rápido</h2>
+        <div class="quick-grid">
+            <a href="/parqueaderos" class="quick-card">
+                <span class="quick-icon">P</span>
+                <span class="quick-label">Parqueaderos</span>
+            </a>
+            {% if request.session.get('usuario_id') %}
+            <a href="/mis-vehiculos" class="quick-card">
+                <span class="quick-icon">V</span>
+                <span class="quick-label">Mis Vehículos</span>
+            </a>
+            <a href="/mis-reservas" class="quick-card">
+                <span class="quick-icon">R</span>
+                <span class="quick-label">Mis Reservas</span>
+            </a>
+            {% if request.session.get('usuario_rol') == 'administrador' %}
+            <a href="/admin" class="quick-card quick-admin">
+                <span class="quick-icon">A</span>
+                <span class="quick-label">Dashboard</span>
+            </a>
+            {% endif %}
+            {% else %}
+            <a href="/login" class="quick-card">
+                <span class="quick-icon">L</span>
+                <span class="quick-label">Iniciar Sesión</span>
+            </a>
+            <a href="/registro" class="quick-card">
+                <span class="quick-icon">R</span>
+                <span class="quick-label">Registrarse</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="stats">
+    <div class="container">
+        <h2>Estadísticas del Sistema</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">P</span>
+                <span class="stat-number">{{ total_parqueaderos }}</span>
+                <span class="stat-label">Parqueaderos</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">E</span>
+                <span class="stat-number">{{ total_espacios }}</span>
+                <span class="stat-label">Espacios Disponibles</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">U</span>
+                <span class="stat-number">{{ total_usuarios }}</span>
+                <span class="stat-label">Usuarios Registrados</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">R</span>
+                <span class="stat-number">{{ total_reservas }}</span>
+                <span class="stat-label">Reservas Realizadas</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta">
+    <div class="container">
+        <h2>¿Listo para empezar?</h2>
+        <p>Regístrate ahora y gestiona tus reservas de manera inteligente.</p>
+        {% if not request.session.get('usuario_id') %}
+        <a href="/registro" class="btn btn-primary btn-lg">Crear Cuenta Gratis</a>
+        {% else %}
+        <a href="/parqueaderos" class="btn btn-primary btn-lg">Explorar Parqueaderos</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .section-description {
+        text-align: center;
+        color: var(--color-text-light);
+        margin-bottom: 2rem;
+    }
+
+    .quick-admin {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    .quick-admin .quick-icon {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--color-primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .cta {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        text-align: center;
+        padding: 4rem 0;
+    }
+
+    .cta h2 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .cta p {
+        opacity: 0.9;
+        margin-bottom: 2rem;
+    }
+
+    .cta .btn-primary {
+        background: white;
+        color: var(--color-primary);
+    }
+
+    .cta .btn-primary:hover {
+        background: var(--color-background);
+    }
+</style>
+{% endblock %}

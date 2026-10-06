@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}ParkSmart{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Barra de navegación -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <span class="logo-icon">P</span>
+                <span class="logo-text">ParkSmart</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Inicio</a></li>
+                <li><a href="/parqueaderos">Parqueaderos</a></li>
+                {% if request.session.get('usuario_id') %}
+                    <li class="user-info">
+                        <span class="user-name">{{ request.session.get('usuario_nombre', 'Usuario') }}</span>
+                    </li>
+                    <li><a href="/mis-reservas">Mis Reservas</a></li>
+                    <li><a href="/mis-vehiculos">Mis Vehículos</a></li>
+                    {% if request.session.get('usuario_rol') == 'administrador' %}
+                        <li><a href="/admin">Admin</a></li>
+                    {% endif %}
+                    <li><a href="/logout" class="btn-logout">Cerrar Sesión</a></li>
+                {% else %}
+                    <li><a href="/login">Iniciar Sesión</a></li>
+                    <li><a href="/registro" class="btn-primary">Registrarse</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <main class="main-content">
+        {% block contenido %}{% endblock %}
+    </main>
+
+    <!-- Pie de página -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>ParkSmart</h4>
+                    <p>Sistema inteligente de gestión de parqueaderos y reservas.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Enlaces</h4>
+                    <ul>
+                        <li><a href="/">Inicio</a></li>
+                        <li><a href="/parqueaderos">Parqueaderos</a></li>
+                        <li><a href="/login">Iniciar Sesión</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contacto</h4>
+                    <p>info@parksmart.com</p>
+                    <p>+57 300 123 4567</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 ParkSmart - Proyecto universitario de programación</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <h1>Estadísticas del Sistema</h1>
+    <p class="page-description">Análisis detallado del uso de ParkSmart</p>
+
+    <div class="charts-grid">
+        <!-- Reservas por día -->
+        <div class="chart-card">
+            <h3>Reservas por Día (últimos 7 días)</h3>
+            <canvas id="chartReservasPorDia"></canvas>
+        </div>
+
+        <!-- Parqueaderos más utilizados -->
+        <div class="chart-card">
+            <h3>Parqueaderos Más Utilizados</h3>
+            <canvas id="chartParqueaderos"></canvas>
+        </div>
+
+        <!-- Horarios con mayor demanda -->
+        <div class="chart-card">
+            <h3>Horarios con Mayor Demanda</h3>
+            <canvas id="chartHorarios"></canvas>
+        </div>
+
+        <!-- Ingresos por mes -->
+        <div class="chart-card">
+            <h3>Ingresos por Mes</h3>
+            <canvas id="chartIngresos"></canvas>
+        </div>
+
+        <!-- Reservas por estado -->
+        <div class="chart-card">
+            <h3>Reservas por Estado</h3>
+            <canvas id="chartEstados"></canvas>
+        </div>
+
+        <!-- Tipos de vehículos -->
+        <div class="chart-card">
+            <h3>Distribución Carros vs Motos</h3>
+            <canvas id="chartVehiculos"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-description {
+        color: var(--color-text-light);
+        margin-bottom: 2rem;
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .chart-card h3 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        color: var(--color-text);
+        text-align: center;
+    }
+
+    .chart-card canvas {
+        max-height: 300px;
+    }
+
+    @media (max-width: 768px) {
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Configuración global de Chart.js
+    Chart.defaults.font.family = "'Segoe UI', system-ui, -apple-system, sans-serif";
+    Chart.defaults.color = '#64748b';
+
+    // Colores del sistema
+    const colores = {
+        primario: '#2563eb',
+        secundario: '#10b981',
+        advertencia: '#f59e0b',
+        peligro: '#ef4444',
+        info: '#06b6d4',
+        púrpura: '#8b5cf6'
+    };
+
+    // 1. Reservas por día
+    fetch('/api/estadisticas/reservas-por-dia')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('chartReservasPorDia'), {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Reservas',
+                        data: data.data,
+                        borderColor: colores.primario,
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+
+    // 2. Parqueaderos más utilizados
+    fetch('/api/estadisticas/parqueaderos-populares')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('chartParqueaderos'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Reservas',
+                        data: data.data,
+                        backgroundColor: colores.secundario
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+
+    // 3. Horarios con mayor demanda
+    fetch('/api/estadisticas/horarios-demanda')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('chartHorarios'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Reservas',
+                        data: data.data,
+                        backgroundColor: colores.advertencia
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+
+    // 4. Ingresos por mes
+    fetch('/api/estadisticas/ingresos-por-mes')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('chartIngresos'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Ingresos ($)',
+                        data: data.data,
+                        backgroundColor: colores.info
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        });
+
+    // 5. Reservas por estado
+    fetch('/api/estadisticas/reservas-por-estado')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('chartEstados'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.data,
+                        backgroundColor: [colores.advertencia, colores.secundario, colores.info, colores.peligro]
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        });
+
+    // 6. Tipos de vehículos
+    fetch('/api/estadisticas/tipos-vehiculos')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('chartVehiculos'), {
+                type: 'pie',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.data,
+                        backgroundColor: [colores.primario, colores.púrpura]
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        });
+</script>
+{% endblock %}

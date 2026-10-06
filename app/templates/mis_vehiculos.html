@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="admin-header">
+        <h1>Mis Vehículos</h1>
+        <a href="/mis-vehiculos/crear" class="btn btn-primary">
+            + Registrar Vehículo
+        </a>
+    </div>
+
+    {% if vehiculos %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Placa</th>
+                    <th>Tipo</th>
+                    <th>Marca</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehiculos %}
+                <tr>
+                    <td><strong>{{ v.placa }}</strong></td>
+                    <td>
+                        <span class="badge badge-{{ 'primary' if v.tipo == 'carro' else 'secondary' }}">
+                            {{ v.tipo }}
+                        </span>
+                    </td>
+                    <td>{{ v.marca or 'Sin marca' }}</td>
+                    <td class="actions">
+                        <a href="/mis-vehiculos/{{ v.id }}/editar" class="btn btn-sm btn-warning">Editar</a>
+                        <form method="POST" action="/mis-vehiculos/{{ v.id }}/eliminar" style="display: inline;" onsubmit="return confirm('¿Eliminar este vehículo?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No tienes vehículos registrados.</p>
+        <a href="/mis-vehiculos/crear" class="btn btn-primary">Registrar mi primer vehículo</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .admin-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th {
+        background-color: var(--color-background);
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--color-text-light);
+        text-transform: uppercase;
+    }
+
+    .data-table tr:hover {
+        background-color: var(--color-background);
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-primary {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-secondary {
+        background-color: #e2e8f0;
+        color: #475569;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .empty-state p {
+        color: var(--color-text-light);
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}

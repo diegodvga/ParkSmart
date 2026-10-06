@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="form-container">
+        <a href="/admin/parqueaderos/{{ parqueadero.id }}/espacios" class="back-link">← Volver a espacios</a>
+        <h1>{{ 'Editar' if espacio else 'Crear' }} Espacio</h1>
+        <p class="form-subtitle">Parqueadero: <strong>{{ parqueadero.nombre }}</strong></p>
+
+        {% if error %}
+        <div class="alert alert-error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ '/admin/espacios/' + espacio.id|string + '/editar' if espacio else '/admin/parqueaderos/' + parqueadero.id|string + '/espacios/crear' }}" class="admin-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="numero">Número de espacio *</label>
+                    <input
+                        type="text"
+                        id="numero"
+                        name="numero"
+                        value="{{ espacio.numero if espacio else '' }}"
+                        required
+                        minlength="1"
+                        maxlength="10"
+                        placeholder="Ej: A1, B2, 101"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="tipo">Tipo de vehículo *</label>
+                    <select id="tipo" name="tipo" required>
+                        <option value="CARRO" {{ 'selected' if espacio and espacio.tipo == 'CARRO' else '' }}>Carro</option>
+                        <option value="MOTO" {{ 'selected' if espacio and espacio.tipo == 'MOTO' else '' }}>Moto</option>
+                    </select>
+                </div>
+            </div>
+
+            {% if espacio %}
+            <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" required>
+                    <option value="disponible" {{ 'selected' if espacio.estado == 'disponible' else '' }}>Disponible</option>
+                    <option value="ocupado" {{ 'selected' if espacio.estado == 'ocupado' else '' }}>Ocupado</option>
+                    <option value="mantenimiento" {{ 'selected' if espacio.estado == 'mantenimiento' else '' }}>Mantenimiento</option>
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="form-actions">
+                <a href="/admin/parqueaderos/{{ parqueadero.id }}/espacios" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    {{ 'Guardar Cambios' if espacio else 'Crear Espacio' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 2rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-container h1 {
+        margin-bottom: 0.25rem;
+        font-size: 1.5rem;
+    }
+
+    .form-subtitle {
+        color: var(--color-text-light);
+        margin-bottom: 1.5rem;
+    }
+
+    .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--color-text);
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .alert {
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .alert-error {
+        background-color: #fef2f2;
+        color: var(--color-danger);
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 600px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

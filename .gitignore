@@ -1,0 +1,25 @@
+# Variables de entorno (NUNCA subir a Git)
+.env
+
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Vercel
+.vercel
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

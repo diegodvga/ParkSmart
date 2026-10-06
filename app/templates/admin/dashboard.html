@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <h1>Dashboard Administrativo</h1>
+    <p class="page-description">Resumen general del sistema ParkSmart</p>
+
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-users">U</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ total_usuarios }}</span>
+                <span class="dashboard-label">Usuarios Registrados</span>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-parking">P</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ total_parqueaderos }}</span>
+                <span class="dashboard-label">Parqueaderos Activos</span>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-spaces">E</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ total_espacios }}</span>
+                <span class="dashboard-label">Espacios Totales</span>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-today">H</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ reservas_hoy }}</span>
+                <span class="dashboard-label">Reservas de Hoy</span>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-total">T</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ total_reservas }}</span>
+                <span class="dashboard-label">Reservas Totales</span>
+            </div>
+        </div>
+
+        <div class="dashboard-card highlight">
+            <div class="dashboard-icon icon-money">$</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">${{ "{:,.0f}".format(ingresos) }}</span>
+                <span class="dashboard-label">Ingresos Totales</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-actions">
+        <a href="/admin/reservas" class="btn btn-primary">Gestionar Reservas</a>
+        <a href="/admin/usuarios" class="btn btn-secondary">Ver Usuarios</a>
+        <a href="/admin/estadisticas" class="btn btn-info">Ver Estadísticas</a>
+        <a href="/admin/parqueaderos" class="btn btn-warning">Gestionar Parqueaderos</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-description {
+        color: var(--color-text-light);
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: var(--shadow-md);
+        transition: var(--transition);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .dashboard-card.highlight {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+    }
+
+    .dashboard-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    .icon-users {
+        background-color: #3b82f6;
+    }
+
+    .icon-parking {
+        background-color: #10b981;
+    }
+
+    .icon-spaces {
+        background-color: #8b5cf6;
+    }
+
+    .icon-today {
+        background-color: #f59e0b;
+    }
+
+    .icon-total {
+        background-color: #6366f1;
+    }
+
+    .icon-money {
+        background-color: #22c55e;
+    }
+
+    .dashboard-card.highlight .dashboard-icon {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .dashboard-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-text);
+    }
+
+    .dashboard-card.highlight .dashboard-number {
+        color: white;
+    }
+
+    .dashboard-label {
+        font-size: 0.875rem;
+        color: var(--color-text-light);
+    }
+
+    .dashboard-card.highlight .dashboard-label {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .dashboard-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-info {
+        background-color: #06b6d4;
+        color: white;
+    }
+
+    .btn-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+</style>
+{% endblock %}

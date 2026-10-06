@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="admin-header">
+        <div>
+            <a href="/admin/parqueaderos" class="back-link">← Volver a parqueaderos</a>
+            <h1>Espacios - {{ parqueadero.nombre }}</h1>
+        </div>
+        <a href="/admin/parqueaderos/{{ parqueadero.id }}/espacios/crear" class="btn btn-primary">
+            + Crear Espacio
+        </a>
+    </div>
+
+    <div class="stats-cards">
+        <div class="stat-card stat-success">
+            <span class="stat-number">{{ disponibles }}</span>
+            <span class="stat-label">Disponibles</span>
+        </div>
+        <div class="stat-card stat-danger">
+            <span class="stat-number">{{ ocupados }}</span>
+            <span class="stat-label">Ocupados</span>
+        </div>
+        <div class="stat-card stat-warning">
+            <span class="stat-number">{{ mantenimiento }}</span>
+            <span class="stat-label">Mantenimiento</span>
+        </div>
+    </div>
+
+    {% if espacios %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in espacios %}
+                <tr>
+                    <td><strong>{{ e.numero }}</strong></td>
+                    <td>
+                        <span class="badge badge-{{ 'primary' if e.tipo == 'carro' else 'secondary' }}">
+                            {{ e.tipo }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ 'success' if e.estado == 'disponible' else 'danger' if e.estado == 'ocupado' else 'warning' }}">
+                            {{ e.estado }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <a href="/admin/espacios/{{ e.id }}/editar" class="btn btn-sm btn-warning">Editar</a>
+                        <form method="POST" action="/admin/espacios/{{ e.id }}/estado" style="display: inline;">
+                            <input type="hidden" name="estado" value="disponible">
+                            <button type="submit" class="btn btn-sm btn-success">Disponible</button>
+                        </form>
+                        <form method="POST" action="/admin/espacios/{{ e.id }}/estado" style="display: inline;">
+                            <input type="hidden" name="estado" value="mantenimiento">
+                            <button type="submit" class="btn btn-sm btn-warning">Mantenimiento</button>
+                        </form>
+                        <form method="POST" action="/admin/espacios/{{ e.id }}/eliminar" style="display: inline;" onsubmit="return confirm('¿Eliminar este espacio?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No hay espacios registrados en este parqueadero.</p>
+        <a href="/admin/parqueaderos/{{ parqueadero.id }}/espacios/crear" class="btn btn-primary">Crear el primero</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-block;
+        margin-bottom: 0.5rem;
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .admin-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .stats-cards {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        flex: 1;
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        background: white;
+        box-shadow: var(--shadow-md);
+    }
+
+    .stat-success {
+        border-left: 4px solid #22c55e;
+    }
+
+    .stat-danger {
+        border-left: 4px solid #ef4444;
+    }
+
+    .stat-warning {
+        border-left: 4px solid #f59e0b;
+    }
+
+    .stat-number {
+        display: block;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .stat-success .stat-number {
+        color: #166534;
+    }
+
+    .stat-danger .stat-number {
+        color: #991b1b;
+    }
+
+    .stat-warning .stat-number {
+        color: #92400e;
+    }
+
+    .stat-label {
+        color: var(--color-text-light);
+        font-size: 0.875rem;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th {
+        background-color: var(--color-background);
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--color-text-light);
+        text-transform: uppercase;
+    }
+
+    .data-table tr:hover {
+        background-color: var(--color-background);
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-danger {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-primary {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-secondary {
+        background-color: #f3e8ff;
+        color: #6b21a8;
+    }
+
+    .badge-info {
+        background-color: #ffedd5;
+        color: #9a3412;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-success {
+        background-color: #22c55e;
+        color: white;
+    }
+
+    .btn-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .empty-state p {
+        color: var(--color-text-light);
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}

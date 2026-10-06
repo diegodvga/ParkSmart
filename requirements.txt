@@ -1,0 +1,36 @@
+# ============================================
+# PARKSMART - Dependencias de Python
+# ============================================
+
+# Framework web principal
+fastapi==0.115.0
+
+# Servidor ASGI para ejecutar FastAPI
+uvicorn[standard]==0.30.6
+
+# ORM para base de datos
+sqlalchemy==2.0.35
+
+# Driver de PostgreSQL (Psycopg 3 - mejor soporte para Windows)
+psycopg[binary]==3.2.3
+
+# Tokens JWT para autenticación
+python-jose[cryptography]==3.3.0
+
+# Hash de contraseñas (bcrypt)
+passlib[bcrypt]==1.7.4
+
+# Manejo de formularios HTML
+python-multipart==0.0.6
+
+# Motor de plantillas
+jinja2==3.1.4
+
+# Cargar variables de entorno desde .env
+python-dotenv==1.0.1
+
+# Validación de datos
+pydantic[email]==2.9.2
+
+# Firmar cookies de sesión (necesario para SessionMiddleware)
+itsdangerous==2.2.0

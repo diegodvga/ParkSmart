@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <a href="/parqueaderos" class="back-link">← Volver a parqueaderos</a>
+
+    <div class="detail-header">
+        <h1>{{ parqueadero.nombre }}</h1>
+        <span class="badge badge-success">Activo</span>
+    </div>
+
+    <div class="detail-grid">
+        <div class="detail-info">
+            <h2>Información General</h2>
+            <div class="info-row">
+                <span class="info-label">Dirección:</span>
+                <span class="info-value">{{ parqueadero.direccion }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Descripción:</span>
+                <span class="info-value">{{ parqueadero.descripcion or 'Sin descripción' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Tarifa Carro:</span>
+                <span class="info-value">${{ "{:,.0f}".format(parqueadero.tarifa_hora_carro) }}/hora</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Tarifa Moto:</span>
+                <span class="info-value">${{ "{:,.0f}".format(parqueadero.tarifa_hora_moto) }}/hora</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Tarifa Bus:</span>
+                <span class="info-value">${{ "{:,.0f}".format(parqueadero.tarifa_hora_bus) }}/hora</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Horario:</span>
+                <span class="info-value">{{ parqueadero.horario_apertura }} - {{ parqueadero.horario_cierre }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Capacidad total:</span>
+                <span class="info-value">{{ parqueadero.capacidad }} espacios</span>
+            </div>
+        </div>
+
+        <div class="detail-stats">
+            <h2>Disponibilidad</h2>
+            <div class="stats-cards">
+                <div class="stat-card stat-success">
+                    <span class="stat-number">{{ espacios_disponibles }}</span>
+                    <span class="stat-label">Disponibles</span>
+                </div>
+                <div class="stat-card stat-danger">
+                    <span class="stat-number">{{ espacios_ocupados }}</span>
+                    <span class="stat-label">Ocupados</span>
+                </div>
+                <div class="stat-card stat-warning">
+                    <span class="stat-number">{{ espacios_mantenimiento }}</span>
+                    <span class="stat-label">Mantenimiento</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="spaces-section">
+        <h2>Espacios del Parqueadero</h2>
+        {% if espacios %}
+        <div class="spaces-grid">
+            {% for espacio in espacios %}
+            <div class="space-card space-{{ espacio.estado }} space-tipo-{{ espacio.tipo }}">
+                <span class="space-number">{{ espacio.numero }}</span>
+                <span class="space-type">{{ espacio.tipo }}</span>
+                <span class="space-status">{{ espacio.estado }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No hay espacios registrados en este parqueadero.</p>
+        {% endif %}
+    </div>
+
+    <div class="detail-actions">
+        {% if espacios %}
+            {% if request.session.get('usuario_id') %}
+                <h3 class="reservation-title">Selecciona un espacio para reservar:</h3>
+                <div class="reservation-grid">
+                    {% for espacio in espacios %}
+                        {% if espacio.estado == 'disponible' %}
+                        <a href="/reservas/nueva/{{ espacio.id }}" class="reservation-card">
+                            <span class="reservation-number">{{ espacio.numero }}</span>
+                            <span class="reservation-type">{{ espacio.tipo }}</span>
+                            <span class="reservation-status">Disponible</span>
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% else %}
+            <div class="login-prompt">
+                <p>Para reservar un espacio, necesitas iniciar sesión.</p>
+                <a href="/login" class="btn btn-primary btn-lg">
+                    Iniciar Sesión
+                </a>
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="no-spaces-message">
+            <p>
+                <strong>No hay espacios disponibles en este parqueadero.</strong><br>
+                <span>Contacta al administrador para agregar espacios.</span>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .detail-header h1 {
+        font-size: 2rem;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .detail-info, .detail-stats {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .detail-info h2, .detail-stats h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        color: var(--color-text);
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: var(--color-text-light);
+    }
+
+    .info-value {
+        color: var(--color-text);
+    }
+
+    .stats-cards {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .stat-card {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        border-radius: var(--radius-md);
+    }
+
+    .stat-success {
+        background-color: #dcfce7;
+    }
+
+    .stat-danger {
+        background-color: #fee2e2;
+    }
+
+    .stat-warning {
+        background-color: #fef3c7;
+    }
+
+    .stat-number {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .stat-success .stat-number {
+        color: #166534;
+    }
+
+    .stat-danger .stat-number {
+        color: #991b1b;
+    }
+
+    .stat-warning .stat-number {
+        color: #92400e;
+    }
+
+    .spaces-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        margin-bottom: 2rem;
+    }
+
+    .spaces-section h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .spaces-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 1rem;
+    }
+
+    .space-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        border: 2px solid var(--color-border);
+        transition: var(--transition);
+    }
+
+    .space-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .space-disponible {
+        border-color: #22c55e;
+        background-color: #f0fdf4;
+    }
+
+    .space-ocupado {
+        border-color: #ef4444;
+        background-color: #fef2f2;
+    }
+
+    .space-mantenimiento {
+        border-color: #f59e0b;
+        background-color: #fffbeb;
+    }
+
+    .space-tipo-carro {
+        border-left: 4px solid #3b82f6;
+    }
+
+    .space-tipo-moto {
+        border-left: 4px solid #8b5cf6;
+    }
+
+    .space-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .space-type {
+        font-size: 0.75rem;
+        color: var(--color-text-light);
+        text-transform: uppercase;
+    }
+
+    .space-status {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .detail-actions {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    .reservation-title {
+        margin-bottom: 1.5rem;
+        color: var(--color-text);
+        font-size: 1.25rem;
+    }
+
+    .reservation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .reservation-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1.5rem 1rem;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border: 2px solid #22c55e;
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .reservation-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(34, 197, 94, 0.3);
+        border-color: #16a34a;
+    }
+
+    .reservation-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #166534;
+    }
+
+    .reservation-type {
+        font-size: 0.875rem;
+        color: #15803d;
+        text-transform: capitalize;
+        margin-top: 0.25rem;
+    }
+
+    .reservation-status {
+        font-size: 0.75rem;
+        color: #16a34a;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background: #dcfce7;
+        border-radius: 9999px;
+    }
+
+    .login-prompt {
+        padding: 2rem;
+    }
+
+    .login-prompt p {
+        color: var(--color-text-light);
+        margin-bottom: 1rem;
+    }
+
+    .no-spaces-message {
+        padding: 2rem;
+        background: #fef3c7;
+        border-radius: var(--radius-md);
+        border: 1px solid #f59e0b;
+    }
+
+    .no-spaces-message p {
+        color: #92400e;
+    }
+
+    .no-spaces-message strong {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .no-spaces-message {
+        color: var(--color-text-light);
+        padding: 1.5rem;
+        background-color: #fef3c7;
+        border-radius: var(--radius-md);
+        border: 1px solid #f59e0b;
+    }
+
+    .no-spaces-message strong {
+        color: #92400e;
+    }
+
+    @media (max-width: 768px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stats-cards {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
