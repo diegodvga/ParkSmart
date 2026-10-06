@@ -39,7 +39,6 @@ class TipoVehiculo(str, enum.Enum):
     """Tipos de vehículo."""
     CARRO = "carro"
     MOTO = "moto"
-    BUS = "bus"
 
 
 class EstadoReserva(str, enum.Enum):
@@ -102,7 +101,6 @@ class Parqueadero(Base):
     capacidad = Column(Integer, nullable=False)
     tarifa_hora_carro = Column(Float, nullable=False)
     tarifa_hora_moto = Column(Float, nullable=False)
-    tarifa_hora_bus = Column(Float, nullable=False)
     horario_apertura = Column(String(5), nullable=False)  # Formato: "08:00"
     horario_cierre = Column(String(5), nullable=False)   # Formato: "20:00"
     estado = Column(Enum(EstadoParqueadero), default=EstadoParqueadero.ACTIVO, nullable=False)

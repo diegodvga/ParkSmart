@@ -21,8 +21,7 @@
                 <span class="info-label">Tarifas:</span>
                 <span class="info-value">
                     Carro: ${{ "{:,.0f}".format(parqueadero.tarifa_hora_carro) }}/hora |
-                    Moto: ${{ "{:,.0f}".format(parqueadero.tarifa_hora_moto) }}/hora |
-                    Bus: ${{ "{:,.0f}".format(parqueadero.tarifa_hora_bus) }}/hora
+                    Moto: ${{ "{:,.0f}".format(parqueadero.tarifa_hora_moto) }}/hora
                 </span>
             </div>
         </div>
@@ -261,9 +260,8 @@
 <script>
     // Tarifas según tipo de vehículo
     const tarifas = {
-        carro: {{ parqueadero.tarifa_hora_carro }},
-        moto: {{ parqueadero.tarifa_hora_moto }},
-        bus: {{ parqueadero.tarifa_hora_bus }}
+        CARRO: {{ parqueadero.tarifa_hora_carro }},
+        MOTO: {{ parqueadero.tarifa_hora_moto }}
     };
 
     const vehiculoSelect = document.getElementById('vehiculo_id');
@@ -273,8 +271,8 @@
 
     function calcularPrecio() {
         const vehiculo = vehiculoSelect.options[vehiculoSelect.selectedIndex];
-        const tipoVehiculo = vehiculo ? vehiculo.dataset.tipo : 'carro';
-        const tarifa = tarifas[tipoVehiculo] || tarifas.carro;
+        const tipoVehiculo = vehiculo ? vehiculo.dataset.tipo : 'CARRO';
+        const tarifa = tarifas[tipoVehiculo] || tarifas.CARRO;
 
         const entrada = horaEntradaInput.value;
         const salida = horaSalidaInput.value;

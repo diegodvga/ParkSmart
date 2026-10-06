@@ -257,10 +257,8 @@ async def crear_reserva(
 
     # Calcular el precio según el tipo de vehículo
     horas = calcular_horas(hora_entrada, hora_salida)
-    if vehiculo.tipo == "moto":
+    if vehiculo.tipo == "MOTO":
         total = horas * parqueadero.tarifa_hora_moto
-    elif vehiculo.tipo == "bus":
-        total = horas * parqueadero.tarifa_hora_bus
     else:
         total = horas * parqueadero.tarifa_hora_carro
 

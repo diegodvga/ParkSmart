@@ -197,7 +197,6 @@ async def crear_parqueadero(
     capacidad: int = Form(...),
     tarifa_hora_carro: float = Form(...),
     tarifa_hora_moto: float = Form(...),
-    tarifa_hora_bus: float = Form(...),
     horario_apertura: str = Form(...),
     horario_cierre: str = Form(...),
     db: Session = Depends(get_db)
@@ -214,7 +213,6 @@ async def crear_parqueadero(
         capacidad=capacidad,
         tarifa_hora_carro=tarifa_hora_carro,
         tarifa_hora_moto=tarifa_hora_moto,
-        tarifa_hora_bus=tarifa_hora_bus,
         horario_apertura=horario_apertura,
         horario_cierre=horario_cierre,
         estado=EstadoParqueadero.ACTIVO

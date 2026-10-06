@@ -21,7 +21,6 @@
                     <th>Dirección</th>
                     <th>Tarifa Carro</th>
                     <th>Tarifa Moto</th>
-                    <th>Tarifa Bus</th>
                     <th>Capacidad</th>
                     <th>Horario</th>
                     <th>Estado</th>
@@ -36,7 +35,6 @@
                     <td>{{ p.direccion }}</td>
                     <td>${{ "{:,.0f}".format(p.tarifa_hora_carro) }}</td>
                     <td>${{ "{:,.0f}".format(p.tarifa_hora_moto) }}</td>
-                    <td>${{ "{:,.0f}".format(p.tarifa_hora_bus) }}</td>
                     <td>{{ p.capacidad }}</td>
                     <td>{{ p.horario_apertura }} - {{ p.horario_cierre }}</td>
                     <td>

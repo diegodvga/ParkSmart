@@ -54,7 +54,6 @@ class ParqueaderoBase(BaseModel):
     capacidad: int = Field(..., gt=0)
     tarifa_hora_carro: float = Field(..., ge=0)
     tarifa_hora_moto: float = Field(..., ge=0)
-    tarifa_hora_bus: float = Field(..., ge=0)
     horario_apertura: str = Field(..., pattern=r"^\d{2}:\d{2}$")
     horario_cierre: str = Field(..., pattern=r"^\d{2}:\d{2}$")
 
@@ -72,7 +71,6 @@ class ParqueaderoActualizar(BaseModel):
     capacidad: Optional[int] = Field(None, gt=0)
     tarifa_hora_carro: Optional[float] = Field(None, ge=0)
     tarifa_hora_moto: Optional[float] = Field(None, ge=0)
-    tarifa_hora_bus: Optional[float] = Field(None, ge=0)
     horario_apertura: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     horario_cierre: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     estado: Optional[str] = None
