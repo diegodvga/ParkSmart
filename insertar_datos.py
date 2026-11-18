@@ -135,7 +135,7 @@ def insertar_datos():
                 nombre=nombre,
                 correo=f"usuario{i+1}@ejemplo.com",
                 password=hash_password("password123"),
-                rol=RolUsuario.USUARIO.value,
+                rol=RolUsuario.CLIENTE.value,
                 fecha_registro=datetime.now() - timedelta(days=random.randint(1, 365))
             ))
         db.add_all(usuarios)

@@ -19,7 +19,7 @@ def crear_administrador():
     try:
         # Verificar si ya existe un administrador
         admin_existente = db.query(Usuario).filter(
-            Usuario.rol == RolUsuario.ADMINISTRADOR
+            Usuario.rol == RolUsuario.ADMIN_GLOBAL
         ).first()
 
         if admin_existente:
@@ -33,7 +33,7 @@ def crear_administrador():
             nombre="Administrador",
             correo="admin@parksmart.com",
             password=hash_password("admin123"),
-            rol=RolUsuario.ADMINISTRADOR,
+            rol=RolUsuario.ADMIN_GLOBAL,
             fecha_registro=datetime.now()
         )
 
