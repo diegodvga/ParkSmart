@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 from dotenv import load_dotenv
 import os
 
@@ -51,7 +52,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True si la contraseña es correcta, False si no
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except (UnknownHashError, ValueError):
+        # El valor guardado no es un hash bcrypt válido (por ejemplo, una
+        # contraseña insertada en texto plano directamente en la base).
+        # Se trata como credenciales incorrectas en lugar de un error 500.
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
