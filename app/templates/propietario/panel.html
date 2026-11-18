@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+{% set r = resumen %}
+<div class="container">
+    <div class="pp-encabezado">
+        <div>
+            <h1>Hola, {{ usuario.nombre }}</h1>
+            <!-- <p class="pp-ayuda">Resumen de todos tus parqueaderos · cortes en hora de Colombia (America/Bogota)</p> -->
+        </div>
+        <a href="/admin/parqueaderos/crear" class="btn btn-primary">Registrar parqueadero</a>
+    </div>
+
+    <!-- Indicadores -->
+    <section class="pp-indicadores" aria-label="Indicadores">
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Ingresos de hoy</span>
+            <strong>{{ r.ingresos_dia|pesos }}</strong>
+        </div>
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Ingresos del mes</span>
+            <strong>{{ r.ingresos_mes|pesos }}</strong>
+        </div>
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Ocupación global</span>
+            <strong>{{ r.ocupacion.porcentaje }} %</strong>
+            <span class="pp-ayuda">{{ r.ocupacion.ocupadas }} de {{ r.ocupacion.operativas }} plazas operativas</span>
+        </div>
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Vehículos dentro</span>
+            <strong>{{ r.vehiculos_activos }}</strong>
+        </div>
+        <div class="pp-indicador {{ 'pp-alerta' if r.alertas_pendientes else '' }}">
+            <span class="pp-etiqueta">Alertas pendientes</span>
+            <strong>{{ r.alertas_pendientes }}</strong>
+        </div>
+    </section>
+
+    <!-- Comparativa -->
+    <section class="pp-seccion">
+        <h2>Comparativa por parqueadero</h2>
+        {% if r.parqueaderos %}
+        <div class="pp-grafico"><canvas id="graficoComparativa" aria-label="Ingresos del mes y ocupación por parqueadero" role="img"></canvas></div>
+        {% set colores_estado = {'activo': 'success', 'pendiente': 'warning', 'rechazado': 'danger', 'inactivo': 'secondary'} %}
+        <div class="pp-tarjetas">
+            {% for p in r.parqueaderos %}
+            {% set nivel = 'alta' if p.porcentaje >= 85 else 'media' if p.porcentaje >= 50 else 'baja' %}
+            <article class="pp-tarjeta" aria-labelledby="parq-{{ p.id }}">
+                <header class="pp-tarjeta-cabeza">
+                    <div>
+                        <h3 id="parq-{{ p.id }}"><a href="/propietario/parqueaderos/{{ p.id }}">{{ p.nombre }}</a></h3>
+                        <a href="/propietario/parqueaderos/{{ p.id }}" class="pp-ver">Ver detalle y plazas →</a>
+                    </div>
+                    <span class="badge badge-{{ colores_estado.get(p.estado, 'secondary') }}">{{ p.estado|capitalize }}</span>
+                </header>
+
+                <div class="pp-tarjeta-ocupacion">
+                    <div class="pp-fila-dato">
+                        <span class="pp-etiqueta">Ocupación ahora</span>
+                        <strong>{{ p.porcentaje }} %</strong>
+                    </div>
+                    <span class="pp-barra" role="presentation"><span class="pp-barra-{{ nivel }}" style="width: {{ [p.porcentaje, 100]|min }}%"></span></span>
+                    <span class="pp-ayuda">{{ p.ocupadas }} de {{ p.operativas }} plazas ocupadas</span>
+                </div>
+
+                <dl class="pp-tarjeta-datos">
+                    <div>
+                        <dt class="pp-etiqueta">Ingresos hoy</dt>
+                        <dd>{{ p.ingresos_dia|pesos }}</dd>
+                    </div>
+                    <div>
+                        <dt class="pp-etiqueta">Ingresos del mes</dt>
+                        <dd>{{ p.ingresos_mes|pesos }}</dd>
+                    </div>
+                </dl>
+
+                <footer class="pp-tarjeta-acciones">
+                    {% if p.estado == 'activo' %}
+                    <a href="/operacion/parqueaderos/{{ p.id }}" class="btn btn-sm btn-primary pp-principal">Entradas y salidas</a>
+                    {% endif %}
+                    <a href="/admin/parqueaderos/{{ p.id }}/espacios" class="btn btn-sm btn-secondary">Espacios</a>
+                    <a href="/admin/parqueaderos/{{ p.id }}/editar" class="btn btn-sm btn-secondary">Editar</a>
+                </footer>
+            </article>
+            {% endfor %}
+        </div>
+        <p class="pp-ayuda">Los parqueaderos nuevos quedan en estado <strong>pendiente</strong> hasta que el administrador los apruebe.</p>
+        {% else %}
+        <p>Todavía no has registrado parqueaderos.</p>
+        {% endif %}
+    </section>
+
+    <!-- Alertas -->
+    <section class="pp-seccion">
+        <h2>Alertas pendientes</h2>
+        {% if r.alertas %}
+        <ul class="pp-lista">
+            {% for a in r.alertas %}
+            <li class="pp-item-alerta">
+                <strong>{{ {'exceso': 'Tiempo excedido', 'retraso': 'Retraso', 'sin_alternativa': 'Sin plaza alternativa'}.get(a.tipo, a.tipo) }}</strong>
+                {% if a.plaza %}· plaza {{ a.plaza }}{% endif %} — {{ a.detalle }}
+                <a href="/propietario/parqueaderos/{{ a.parqueadero_id }}">Ver parqueadero</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="pp-ayuda">Sin alertas.</p>
+        {% endif %}
+    </section>
+
+    <!-- <p class="pp-ayuda pp-nota">
+        Ingresos = pagos confirmados en el período menos los reembolsos hechos en ese mismo período.
+        Ocupación = plazas ocupadas / plazas operativas (las que no están en mantenimiento).
+    </p> -->
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "propietario/_estilos.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{% if resumen.parqueaderos %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    // Datos del servidor (ya filtrados por propietario)
+    const filas = {{ resumen.parqueaderos|tojson }};
+    new Chart(document.getElementById('graficoComparativa'), {
+        type: 'bar',
+        data: {
+            labels: filas.map(f => f.nombre),
+            datasets: [
+                { label: 'Ingresos del mes ($)', data: filas.map(f => f.ingresos_mes), backgroundColor: '#2563eb', yAxisID: 'pesos' },
+                { label: 'Ocupación (%)', data: filas.map(f => f.porcentaje), backgroundColor: '#10b981', yAxisID: 'porcentaje' }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                pesos: { position: 'left', beginAtZero: true },
+                porcentaje: { position: 'right', beginAtZero: true, max: 100, grid: { drawOnChartArea: false } }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

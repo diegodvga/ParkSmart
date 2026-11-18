@@ -4,32 +4,116 @@
 
 {% block contenido %}
 <div class="container">
-    <h1>Gestión de Usuarios</h1>
-    <p class="page-description">Usuarios registrados en el sistema</p>
+    <div class="us-encabezado">
+        <h1>Gestión de Usuarios</h1>
+        <a href="/admin/usuarios/crear" class="btn btn-primary">+ Crear propietario</a>
+    </div>
+    <!-- <p class="page-description">
+        Usuarios de todos los roles. Las cuentas de propietario solo las crea el administrador;
+        el registro público crea clientes. Suspender una cuenta no borra nada: solo impide iniciar sesión.
+    </p> -->
+
+    {% for aviso in avisos %}
+    <div class="us-aviso us-aviso-{{ aviso.tipo }}" role="{{ 'alert' if aviso.tipo == 'error' else 'status' }}">{{ aviso.texto }}</div>
+    {% endfor %}
+
+    <form method="GET" action="/admin/usuarios" class="us-filtro" role="search">
+        <label for="q">Buscar por nombre</label>
+        <input type="search" id="q" name="q" value="{{ busqueda or '' }}" placeholder="Ej.: maría" maxlength="100">
+        <label for="rol">Rol</label>
+        <select id="rol" name="rol">
+            <option value="">Todos</option>
+            {% for r in roles %}
+            <option value="{{ r }}" {{ 'selected' if filtro_rol == r else '' }}>{{ r|replace('_', ' ')|capitalize }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+        {% if busqueda or filtro_rol %}<a href="/admin/usuarios" class="btn btn-sm btn-secondary">Limpiar</a>{% endif %}
+    </form>
+    {% if busqueda %}<p class="us-ayuda">{{ usuarios|length }} resultado{{ '' if usuarios|length == 1 else 's' }} para «{{ busqueda }}».</p>{% endif %}
 
     {% if usuarios %}
     <div class="table-container">
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Correo</th>
-                    <th>Fecha de Registro</th>
-                    <th>Vehículos</th>
-                    <th>Reservas</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Correo</th>
+                    <th scope="col">Rol</th>
+                    <th scope="col">Cédula</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Registro</th>
+                    <th scope="col">Actividad</th>
+                    <th scope="col">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in usuarios %}
                 {% set u = item.usuario %}
+                {% set es_otro_admin = u.rol.value == 'admin_global' and u.id != admin_id %}
                 <tr>
                     <td>{{ u.id }}</td>
-                    <td><strong>{{ u.nombre }}</strong></td>
+                    <td><strong>{{ u.nombre }}</strong>{% if u.telefono %}<br><span class="us-ayuda">{{ u.telefono }}</span>{% endif %}</td>
                     <td>{{ u.correo }}</td>
+                    <td>{{ u.rol.value|replace('_', ' ')|capitalize }}</td>
+                    <td>
+                        {% if u.rol.value == 'propietario' %}
+                            {% if u.cedula %}{{ u.cedula }}{% else %}<span class="badge badge-warning">Sin cédula</span>{% endif %}
+                        {% else %}<span class="us-ayuda">—</span>{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ 'success' if u.activo else 'danger' }}">{{ 'Activo' if u.activo else 'Suspendido' }}</span>
+                    </td>
                     <td>{{ u.fecha_registro.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ item.total_vehiculos }}</td>
-                    <td>{{ item.total_reservas }}</td>
+                    <td class="us-ayuda">
+                        {% if u.rol.value == 'propietario' %}{{ item.total_parqueaderos }} parqueaderos
+                        {% elif u.rol.value == 'cliente' %}{{ item.total_vehiculos }} vehículos · {{ item.total_reservas }} reservas
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="us-acciones">
+                        {% if u.rol.value != 'admin_global' and u.id != admin_id %}
+                            {% if u.activo %}
+                            <form method="POST" action="/admin/usuarios/{{ u.id }}/suspender" onsubmit="return confirm('¿Suspender la cuenta de {{ u.nombre }}?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Suspender</button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="/admin/usuarios/{{ u.id }}/activar">
+                                <button type="submit" class="btn btn-sm btn-success">Activar</button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if not es_otro_admin %}
+                        <details class="us-panel">
+                            <summary class="btn btn-sm btn-secondary">Cambiar contraseña</summary>
+                            <form method="POST" action="/admin/usuarios/{{ u.id }}/contrasena" class="us-form" autocomplete="off">
+                                <p><strong>Nueva contraseña para {{ u.nombre }}</strong><br><span class="us-ayuda">{{ u.correo }} · {{ u.rol.value|replace('_', ' ') }}</span></p>
+                                <input type="hidden" name="q" value="{{ busqueda or '' }}">
+                                <input type="hidden" name="rol" value="{{ filtro_rol or '' }}">
+                                <label for="pw-{{ u.id }}">Nueva contraseña</label>
+                                <input type="password" id="pw-{{ u.id }}" name="password" required minlength="6" maxlength="100" autocomplete="new-password">
+                                <label for="pw2-{{ u.id }}">Confirmar contraseña</label>
+                                <input type="password" id="pw2-{{ u.id }}" name="confirmar_password" required minlength="6" maxlength="100" autocomplete="new-password">
+                                <button type="submit" class="btn btn-sm btn-primary">Guardar contraseña</button>
+                            </form>
+                        </details>
+                        {% endif %}
+
+                        {% if u.rol.value == 'propietario' %}
+                        <details class="us-panel">
+                            <summary class="btn btn-sm btn-secondary">{{ 'Editar cédula' if u.cedula else 'Completar cédula' }}</summary>
+                            <form method="POST" action="/admin/usuarios/{{ u.id }}/cedula" class="us-form">
+                                <input type="hidden" name="q" value="{{ busqueda or '' }}">
+                                <input type="hidden" name="rol" value="{{ filtro_rol or '' }}">
+                                <label for="ced-{{ u.id }}">Número de cédula de {{ u.nombre }}</label>
+                                <input id="ced-{{ u.id }}" name="cedula" value="{{ u.cedula or '' }}" required
+                                       inputmode="numeric" pattern="[0-9]{4,15}" maxlength="15" title="Solo dígitos, entre 4 y 15">
+                                <button type="submit" class="btn btn-sm btn-primary">Guardar cédula</button>
+                            </form>
+                        </details>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -37,7 +121,7 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <p>No hay usuarios registrados.</p>
+        <p>No hay usuarios que coincidan. <a href="/admin/usuarios">Ver todos</a></p>
     </div>
     {% endif %}
 </div>
@@ -45,6 +129,30 @@
 
 {% block extra_css %}
 <style>
+    .us-ayuda { color: var(--color-text-light); font-size: 0.85rem; }
+    .us-encabezado { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .us-filtro { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .us-filtro label { font-weight: 600; font-size: 0.875rem; }
+    .us-filtro input, .us-filtro select { padding: 0.45rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font: inherit; }
+    .us-filtro input { min-width: 14rem; }
+    .us-acciones { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; min-width: 11rem; }
+    .us-acciones form { display: inline; }
+    .us-panel summary { list-style: none; cursor: pointer; }
+    .us-panel summary::-webkit-details-marker { display: none; }
+    .us-panel[open] { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.5rem; background: #f8fafc; }
+    .us-form { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.5rem; }
+    .us-form label { font-size: 0.8rem; font-weight: 600; }
+    .us-form input { padding: 0.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .us-form p { margin: 0; font-size: 0.85rem; }
+    .us-aviso-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .us-aviso { padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid; }
+    .us-aviso-exito { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .us-aviso-advertencia { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
     .page-description {
         color: var(--color-text-light);
         margin-bottom: 2rem;

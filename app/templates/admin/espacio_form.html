@@ -34,8 +34,11 @@
                 <div class="form-group">
                     <label for="tipo">Tipo de vehículo *</label>
                     <select id="tipo" name="tipo" required>
-                        <option value="CARRO" {{ 'selected' if espacio and espacio.tipo == 'CARRO' else '' }}>Carro</option>
-                        <option value="MOTO" {{ 'selected' if espacio and espacio.tipo == 'MOTO' else '' }}>Moto</option>
+                        {% for tipo, nombre in [('carro', 'Carro'), ('moto', 'Moto'), ('bus', 'Bus')] %}
+                        {% if (espacio and espacio.tipo == tipo) or parqueadero.tarifa_para(tipo) is not none %}
+                        <option value="{{ tipo }}" {{ 'selected' if espacio and espacio.tipo == tipo else '' }}>{{ nombre }}</option>
+                        {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
             </div>

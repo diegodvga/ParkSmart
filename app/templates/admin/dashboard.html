@@ -3,71 +3,204 @@
 {% block titulo %}{{ titulo }}{% endblock %}
 
 {% block contenido %}
+{% set r = resumen %}
 <div class="container">
     <h1>Dashboard Administrativo</h1>
-    <p class="page-description">Resumen general del sistema ParkSmart</p>
+    <!-- <p class="page-description">Resumen de toda la plataforma · cortes en hora de Colombia (America/Bogota)</p> -->
+
+    {% for aviso in avisos %}
+    <div class="ad-aviso ad-aviso-{{ aviso.tipo }}" role="status">{{ aviso.texto }}</div>
+    {% endfor %}
+
+    <!-- Parqueaderos que esperan aprobación -->
+    <section class="ad-seccion {{ 'ad-destacada' if pendientes else '' }}">
+        <div class="ad-encabezado">
+            <h2>Parqueaderos pendientes de aprobación</h2>
+            <span class="ad-contador {{ 'ad-contador-alerta' if pendientes else '' }}">{{ pendientes|length }}</span>
+        </div>
+        {% if pendientes %}
+        <div class="table-container">
+            <table class="data-table ad-tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Parqueadero</th>
+                        <th scope="col">Propietario</th>
+                        <th scope="col">Ciudad</th>
+                        <th scope="col">Plazas</th>
+                        <th scope="col">Registrado</th>
+                        <th scope="col"><span class="sr-only">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pendientes %}
+                    <tr>
+                        <td data-etiqueta="Parqueadero">
+                            <span class="ad-nombre">{{ p.nombre }}</span>
+                            <span class="ad-ayuda">{{ p.direccion }}</span>
+                        </td>
+                        <td data-etiqueta="Propietario">{{ p.propietario_nombre }}</td>
+                        <td data-etiqueta="Ciudad">{{ p.ciudad }}</td>
+                        <td data-etiqueta="Plazas"><span class="ad-plazas">{{ p.capacidad }}</span></td>
+                        <td data-etiqueta="Registrado">{{ p.fecha_creacion.strftime('%d/%m/%Y') }}</td>
+                        <td class="ad-acciones">
+                            <form method="POST" action="/admin/parqueaderos/{{ p.id }}/aprobar">
+                                <input type="hidden" name="volver_a" value="/admin">
+                                <button type="submit" class="btn btn-sm btn-success">Aprobar</button>
+                            </form>
+                            <form method="POST" action="/admin/parqueaderos/{{ p.id }}/rechazar" onsubmit="return confirm('¿Rechazar «{{ p.nombre }}»?');">
+                                <input type="hidden" name="volver_a" value="/admin">
+                                <button type="submit" class="btn btn-sm btn-danger">Rechazar</button>
+                            </form>
+                            <a href="/admin/parqueaderos/{{ p.id }}/editar" class="btn btn-sm btn-secondary">Revisar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="ad-ayuda">No hay parqueaderos esperando aprobación.</p>
+        {% endif %}
+    </section>
 
     <div class="dashboard-grid">
-        <div class="dashboard-card">
-            <div class="dashboard-icon icon-users">U</div>
-            <div class="dashboard-info">
-                <span class="dashboard-number">{{ total_usuarios }}</span>
-                <span class="dashboard-label">Usuarios Registrados</span>
-            </div>
-        </div>
-
-        <div class="dashboard-card">
-            <div class="dashboard-icon icon-parking">P</div>
-            <div class="dashboard-info">
-                <span class="dashboard-number">{{ total_parqueaderos }}</span>
-                <span class="dashboard-label">Parqueaderos Activos</span>
-            </div>
-        </div>
-
-        <div class="dashboard-card">
-            <div class="dashboard-icon icon-spaces">E</div>
-            <div class="dashboard-info">
-                <span class="dashboard-number">{{ total_espacios }}</span>
-                <span class="dashboard-label">Espacios Totales</span>
-            </div>
-        </div>
-
-        <div class="dashboard-card">
-            <div class="dashboard-icon icon-today">H</div>
-            <div class="dashboard-info">
-                <span class="dashboard-number">{{ reservas_hoy }}</span>
-                <span class="dashboard-label">Reservas de Hoy</span>
-            </div>
-        </div>
-
-        <div class="dashboard-card">
-            <div class="dashboard-icon icon-total">T</div>
-            <div class="dashboard-info">
-                <span class="dashboard-number">{{ total_reservas }}</span>
-                <span class="dashboard-label">Reservas Totales</span>
-            </div>
-        </div>
-
         <div class="dashboard-card highlight">
             <div class="dashboard-icon icon-money">$</div>
             <div class="dashboard-info">
-                <span class="dashboard-number">${{ "{:,.0f}".format(ingresos) }}</span>
-                <span class="dashboard-label">Ingresos Totales</span>
+                <span class="dashboard-number">{{ r.ingresos_dia|pesos }}</span>
+                <span class="dashboard-label">Ingresos de hoy</span>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-money">$</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ r.ingresos_mes|pesos }}</span>
+                <span class="dashboard-label">Ingresos del mes</span>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-parking">P</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ r.parqueaderos.activo }}</span>
+                <span class="dashboard-label">Parqueaderos activos · {{ r.parqueaderos.pendiente }} pendientes · {{ r.parqueaderos.rechazado }} rechazados</span>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-spaces">%</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ r.ocupacion.porcentaje }} %</span>
+                <span class="dashboard-label">Ocupación ahora ({{ r.ocupacion.ocupadas }}/{{ r.ocupacion.operativas }} plazas)</span>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-today">H</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ r.reservas_hoy }}</span>
+                <span class="dashboard-label">Reservas de hoy</span>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-users">U</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ r.usuarios.cliente + r.usuarios.propietario + r.usuarios.operario }}</span>
+                <span class="dashboard-label">{{ r.usuarios.cliente }} clientes · {{ r.usuarios.propietario }} propietarios · {{ r.usuarios.operario }} operarios · {{ r.usuarios_suspendidos }} suspendidos</span>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-icon icon-total">!</div>
+            <div class="dashboard-info">
+                <span class="dashboard-number">{{ r.alertas_pendientes }}</span>
+                <span class="dashboard-label">Alertas abiertas en la plataforma</span>
             </div>
         </div>
     </div>
 
     <div class="dashboard-actions">
-        <a href="/admin/reservas" class="btn btn-primary">Gestionar Reservas</a>
-        <a href="/admin/usuarios" class="btn btn-secondary">Ver Usuarios</a>
-        <a href="/admin/estadisticas" class="btn btn-info">Ver Estadísticas</a>
         <a href="/admin/parqueaderos" class="btn btn-warning">Gestionar Parqueaderos</a>
+        <a href="/admin/usuarios" class="btn btn-secondary">Gestionar Usuarios</a>
+        <a href="/admin/reservas" class="btn btn-primary">Gestionar Reservas</a>
+        <a href="/admin/estadisticas" class="btn btn-info">Ver Estadísticas</a>
     </div>
+    <!-- <p class="ad-ayuda ad-nota">Ingresos = pagos confirmados menos reembolsos del período. Ocupación = plazas ocupadas / plazas operativas de los parqueaderos activos.</p> -->
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+    .ad-seccion {
+        background: var(--color-surface); border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .ad-seccion h2 { font-size: 1.125rem; margin-bottom: 0.75rem; }
+    .ad-destacada { border-color: var(--color-warning); border-width: 2px; }
+
+    /* Encabezado de sección con contador */
+    .ad-encabezado {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding-bottom: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border);
+    }
+    .ad-encabezado h2 { margin: 0; }
+    .ad-contador {
+        min-width: 2rem; padding: 0.15rem 0.6rem; border-radius: 9999px; text-align: center;
+        font-weight: 700; font-size: 0.875rem; background: var(--color-background); color: var(--color-text-light);
+    }
+    .ad-contador-alerta { background: #fef3c7; color: #92400e; }
+
+    /* Tabla de pendientes */
+    .table-container { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .ad-tabla { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .ad-tabla th, .ad-tabla td { padding: 0.85rem 1rem; text-align: left; vertical-align: middle; }
+    .ad-tabla thead th {
+        background: var(--color-background); color: var(--color-text-light);
+        font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .ad-tabla tbody tr + tr td { border-top: 1px solid var(--color-border); }
+    .ad-tabla tbody tr:hover { background: #f1f5f9; }
+    .ad-nombre { display: block; font-weight: 600; color: var(--color-text); }
+    .ad-tabla .ad-ayuda { display: block; margin-top: 0.15rem; }
+    .ad-plazas {
+        display: inline-block; padding: 0.15rem 0.55rem; border-radius: var(--radius-sm);
+        background: #eff6ff; color: var(--color-primary); font-weight: 600;
+    }
+    .ad-tabla .ad-acciones { justify-content: flex-end; flex-wrap: nowrap; }
+
+    /* Botones pequeños con los colores de la página */
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: var(--radius-sm); white-space: nowrap; }
+    .btn-success { background: var(--color-success); color: white; border: none; }
+    .btn-success:hover { background: #16a34a; }
+    .btn-danger { background: var(--color-danger); color: white; border: none; }
+    .btn-danger:hover { background: #dc2626; }
+
+    /* En pantallas angostas cada parqueadero se ve como una tarjeta */
+    @media (max-width: 720px) {
+        .table-container { border: none; }
+        .ad-tabla thead { display: none; }
+        .ad-tabla, .ad-tabla tbody, .ad-tabla tr, .ad-tabla td { display: block; width: 100%; }
+        .ad-tabla tbody tr {
+            border: 1px solid var(--color-border); border-radius: var(--radius-md);
+            padding: 0.5rem 0; margin-bottom: 0.75rem;
+        }
+        .ad-tabla tbody tr + tr td { border-top: none; }
+        .ad-tabla td { padding: 0.35rem 1rem; }
+        .ad-tabla td[data-etiqueta]:not(:first-child)::before {
+            content: attr(data-etiqueta) ": "; font-weight: 600; color: var(--color-text-light);
+        }
+        .ad-tabla .ad-acciones { justify-content: flex-start; flex-wrap: wrap; padding-top: 0.6rem; }
+    }
+    .ad-ayuda { color: var(--color-text-light); font-size: 0.85rem; }
+    .ad-nota { margin-top: 1.5rem; }
+    .ad-acciones { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+    .ad-acciones form { display: inline; }
+    .ad-aviso { padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid; }
+    .ad-aviso-exito { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .ad-aviso-advertencia { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .ad-aviso-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
     .page-description {
         color: var(--color-text-light);
         margin-bottom: 2rem;

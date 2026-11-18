@@ -13,10 +13,9 @@
                 <label for="estado">Estado:</label>
                 <select name="estado" id="estado">
                     <option value="">Todos</option>
-                    <option value="pendiente" {{ 'selected' if filtro_estado == 'pendiente' else '' }}>Pendiente</option>
-                    <option value="confirmada" {{ 'selected' if filtro_estado == 'confirmada' else '' }}>Confirmada</option>
-                    <option value="completada" {{ 'selected' if filtro_estado == 'completada' else '' }}>Completada</option>
-                    <option value="cancelada" {{ 'selected' if filtro_estado == 'cancelada' else '' }}>Cancelada</option>
+                    {% for e in estados %}
+                    <option value="{{ e }}" {{ 'selected' if filtro_estado == e else '' }}>{{ e|replace('_', ' ')|capitalize }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="filter-group">
@@ -54,12 +53,12 @@
                     <td>{{ item.parqueadero.nombre if item.parqueadero else 'N/A' }}</td>
                     <td>{{ item.espacio.numero if item.espacio else 'N/A' }}</td>
                     <td>{{ item.vehiculo.placa if item.vehiculo else 'N/A' }}</td>
-                    <td>{{ r.fecha.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ r.hora_entrada }} - {{ r.hora_salida }}</td>
+                    <td>{{ r.inicio|local('%d/%m/%Y') }}</td>
+                    <td>{{ r.inicio|local('%H:%M') }} - {{ r.fin|local('%H:%M') }}</td>
                     <td>${{ "{:,.0f}".format(r.total) }}</td>
                     <td>
                         <span class="badge badge-{{ 'warning' if r.estado == 'pendiente' else 'success' if r.estado == 'confirmada' else 'info' if r.estado == 'completada' else 'danger' }}">
-                            {{ r.estado }}
+                            {{ r.estado.value|replace('_', ' ') }}
                         </span>
                     </td>
                     <td class="actions">
@@ -73,12 +72,6 @@
                         <form method="POST" action="/admin/reservas/{{ r.id }}/estado" style="display: inline;">
                             <input type="hidden" name="estado" value="cancelada">
                             <button type="submit" class="btn btn-sm btn-danger">Cancelar</button>
-                        </form>
-                        {% endif %}
-                        {% if r.estado == 'confirmada' %}
-                        <form method="POST" action="/admin/reservas/{{ r.id }}/estado" style="display: inline;">
-                            <input type="hidden" name="estado" value="completada">
-                            <button type="submit" class="btn btn-sm btn-info">Completar</button>
                         </form>
                         {% endif %}
                     </td>

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "componentes/plazas.html" import grilla_plazas, estilos_plazas %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <a href="/propietario/panel" class="pp-volver">← Mi panel</a>
+    <div class="pp-encabezado">
+        <div>
+            <h1>{{ parqueadero.nombre }}</h1>
+            <p class="pp-ayuda">{{ parqueadero.direccion }} </p>
+        </div>
+        {% if parqueadero.estado.value == 'activo' %}
+        <a href="/operacion/parqueaderos/{{ parqueadero.id }}" class="btn btn-primary">Entradas y salidas</a>
+        {% endif %}
+    </div>
+
+    {% if parqueadero.estado.value == 'pendiente' %}
+    <div class="pp-aviso" role="status">
+        <strong>Pendiente de aprobación del administrador.</strong>
+        Todavía no aparece en el catálogo ni recibe vehículos. Ya puedes revisar sus plazas y editar sus datos.
+    </div>
+    {% elif parqueadero.estado.value != 'activo' %}
+    <div class="pp-aviso" role="status">
+        <strong>Parqueadero {{ parqueadero.estado.value }}.</strong>
+        No aparece en el catálogo ni recibe vehículos.
+    </div>
+    {% endif %}
+
+    <section class="pp-indicadores" aria-label="Indicadores">
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Ingresos de hoy</span>
+            <strong>{{ m.ingresos_dia|pesos }}</strong>
+        </div>
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Ingresos del mes</span>
+            <strong>{{ m.ingresos_mes|pesos }}</strong>
+        </div>
+        <div class="pp-indicador">
+            <span class="pp-etiqueta">Ocupación</span>
+            <strong>{{ m.ocupacion.porcentaje }} %</strong>
+            <span class="pp-ayuda">{{ m.ocupacion.ocupadas }} de {{ m.ocupacion.operativas }} plazas operativas
+                {% if m.ocupacion.mantenimiento %}· {{ m.ocupacion.mantenimiento }} en mantenimiento{% endif %}</span>
+        </div>
+        <div class="pp-indicador {{ 'pp-alerta' if m.alertas else '' }}">
+            <span class="pp-etiqueta">Alertas activas</span>
+            <strong>{{ m.alertas|length }}</strong>
+        </div>
+    </section>
+
+    {# Componente compartido con el formulario de reserva del cliente #}
+    {% set nombres = {'libre': 'Libre', 'reserva': 'Con reserva', 'directo': 'Sin reserva', 'mantenimiento': 'Mantenimiento', 'afectada': 'Afectada'} %}
+    {% set tarjetas = [] %}
+    {% for p in m.plazas %}
+    {% set _ = tarjetas.append({'numero': p.numero, 'situacion': p.situacion,
+                                'texto': p.placa or nombres[p.situacion],
+                                'detalle': nombres[p.situacion] if p.placa else None}) %}
+    {% endfor %}
+    {{ grilla_plazas(tarjetas, nombres.items()|list) }}
+
+    <div class="pp-columnas">
+        <section class="pp-seccion">
+            <h2>Reservas próximas (24 h)</h2>
+            {% if m.reservas_proximas %}
+            <ul class="pp-lista">
+                {% for r in m.reservas_proximas %}
+                <li><strong>{{ r.plaza }}</strong> · {{ r.placa }} · {{ r.inicio_texto }} – {{ r.fin_texto }} · {{ r.estado }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="pp-ayuda">No hay reservas en las próximas 24 horas.</p>
+            {% endif %}
+        </section>
+
+        <section class="pp-seccion">
+            <h2>Alertas activas</h2>
+            {% if m.alertas %}
+            <ul class="pp-lista">
+                {% for a in m.alertas %}
+                <li class="pp-item-alerta">
+                    <strong>{{ {'exceso': 'Tiempo excedido', 'retraso': 'Retraso', 'sin_alternativa': 'Sin plaza alternativa'}.get(a.tipo, a.tipo) }}</strong>
+                    {% if a.plaza %}· plaza {{ a.plaza }}{% endif %} — {{ a.detalle }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="pp-ayuda">Sin alertas.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- <p class="pp-ayuda pp-nota">
+        Ingresos = pagos confirmados en el período menos los reembolsos hechos en ese mismo período.
+        "Afectada" = plaza con un vehículo excedido o con una incidencia abierta.
+    </p> -->
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "propietario/_estilos.html" %}
+{{ estilos_plazas() }}
+{% endblock %}

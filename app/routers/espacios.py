@@ -1,7 +1,7 @@
 """
 Router de espacios para ParkSmart.
 
-Rutas administrativas:
+Rutas de gestión (propietario: solo espacios de SUS parqueaderos; admin_global: todos):
 - GET  /admin/parqueaderos/{id}/espacios              → Lista de espacios
 - GET  /admin/parqueaderos/{id}/espacios/crear        → Formulario crear
 - POST /admin/parqueaderos/{id}/espacios/crear        → Procesar creación
@@ -18,7 +18,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.database import get_db
-from app.models import Espacio, Parqueadero, TipoEspacio, EstadoEspacio, RolUsuario
+from app.dependencies import obtener_parqueadero_autorizado, requiere_rol
+from app.models import Espacio, Parqueadero, TipoEspacio, EstadoEspacio, RolUsuario, Usuario
+from app.schemas import NOMBRES_TIPO_VEHICULO
 
 # Configurar templates
 templates = Jinja2Templates(directory="app/templates")
@@ -28,37 +30,55 @@ router = APIRouter(
     tags=["espacios"]
 )
 
+# Gestionar espacios: el propietario (de SU parqueadero) o el admin_global.
+# El rol se valida aquí; que el parqueadero sea suyo se valida en cada ruta
+# con obtener_parqueadero_autorizado().
+gestor_espacios = requiere_rol(RolUsuario.PROPIETARIO, RolUsuario.ADMIN_GLOBAL)
 
-def requerir_admin(request: Request):
+
+def obtener_espacio_autorizado(db: Session, espacio_id: int, usuario: Usuario) -> Espacio:
     """
-    Verifica que el usuario sea administrador.
+    Busca un espacio y verifica que su parqueadero sea del usuario (o que sea admin_global).
     """
-    rol = request.session.get("usuario_rol")
-    if rol != RolUsuario.ADMINISTRADOR.value:
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    espacio = db.query(Espacio).filter(Espacio.id == espacio_id).first()
+    if not espacio:
+        raise HTTPException(status_code=404, detail="Espacio no encontrado")
+
+    obtener_parqueadero_autorizado(db, espacio.parqueadero_id, usuario)
+    return espacio
 
 
 # ============================================
 # RUTAS ADMINISTRATIVAS
 # ============================================
 
+def validar_tipo_espacio(parqueadero, tipo, tipo_actual=None):
+    """
+    Revisa que el tipo de espacio exista y que el parqueadero acepte
+    ese tipo de vehículo. Devuelve un mensaje de error o None si es válido.
+
+    Al editar, se permite conservar el tipo que el espacio ya tenía.
+    """
+    tipo = tipo.strip().lower()
+    if tipo not in [t.value for t in TipoEspacio]:
+        return "Tipo de espacio no válido."
+    tipo_actual = getattr(tipo_actual, "value", tipo_actual)
+    if tipo != tipo_actual and parqueadero.tarifa_para(tipo) is None:
+        return f"Este parqueadero no acepta {NOMBRES_TIPO_VEHICULO[tipo]}."
+    return None
+
+
 @router.get("/admin/parqueaderos/{parqueadero_id}/espacios", response_class=HTMLResponse)
 async def listar_espacios(
     request: Request,
     parqueadero_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Muestra la lista de espacios de un parqueadero.
     """
-    requerir_admin(request)
-
-    parqueadero = db.query(Parqueadero).filter(
-        Parqueadero.id == parqueadero_id
-    ).first()
-
-    if not parqueadero:
-        raise HTTPException(status_code=404, detail="Parqueadero no encontrado")
+    parqueadero = obtener_parqueadero_autorizado(db, parqueadero_id, usuario)
 
     espacios = db.query(Espacio).filter(
         Espacio.parqueadero_id == parqueadero_id
@@ -87,19 +107,13 @@ async def listar_espacios(
 async def formulario_crear_espacio(
     request: Request,
     parqueadero_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Muestra el formulario para crear un espacio.
     """
-    requerir_admin(request)
-
-    parqueadero = db.query(Parqueadero).filter(
-        Parqueadero.id == parqueadero_id
-    ).first()
-
-    if not parqueadero:
-        raise HTTPException(status_code=404, detail="Parqueadero no encontrado")
+    parqueadero = obtener_parqueadero_autorizado(db, parqueadero_id, usuario)
 
     return templates.TemplateResponse(
         "admin/espacio_form.html",
@@ -118,20 +132,14 @@ async def crear_espacio(
     parqueadero_id: int,
     numero: str = Form(...),
     tipo: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Procesa la creación de un nuevo espacio.
     """
-    requerir_admin(request)
-
-    # Verificar que el parqueadero existe
-    parqueadero = db.query(Parqueadero).filter(
-        Parqueadero.id == parqueadero_id
-    ).first()
-
-    if not parqueadero:
-        raise HTTPException(status_code=404, detail="Parqueadero no encontrado")
+    # Verificar que el parqueadero existe y es del usuario
+    parqueadero = obtener_parqueadero_autorizado(db, parqueadero_id, usuario)
 
     # Verificar que no exista un espacio con el mismo número en ese parqueadero
     espacio_existente = db.query(Espacio).filter(
@@ -152,10 +160,24 @@ async def crear_espacio(
             status_code=400
         )
 
+    error_tipo = validar_tipo_espacio(parqueadero, tipo)
+    if error_tipo:
+        return templates.TemplateResponse(
+            "admin/espacio_form.html",
+            {
+                "request": request,
+                "titulo": "Crear Espacio",
+                "parqueadero": parqueadero,
+                "espacio": None,
+                "error": error_tipo
+            },
+            status_code=400
+        )
+
     nuevo_espacio = Espacio(
         parqueadero_id=parqueadero_id,
         numero=numero.upper(),
-        tipo=tipo.upper(),
+        tipo=tipo.strip().lower(),
         estado=EstadoEspacio.DISPONIBLE.value
     )
 
@@ -172,17 +194,13 @@ async def crear_espacio(
 async def formulario_editar_espacio(
     request: Request,
     espacio_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Muestra el formulario para editar un espacio.
     """
-    requerir_admin(request)
-
-    espacio = db.query(Espacio).filter(Espacio.id == espacio_id).first()
-
-    if not espacio:
-        raise HTTPException(status_code=404, detail="Espacio no encontrado")
+    espacio = obtener_espacio_autorizado(db, espacio_id, usuario)
 
     parqueadero = db.query(Parqueadero).filter(
         Parqueadero.id == espacio.parqueadero_id
@@ -206,17 +224,13 @@ async def editar_espacio(
     numero: str = Form(...),
     tipo: str = Form(...),
     estado: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Procesa la edición de un espacio.
     """
-    requerir_admin(request)
-
-    espacio = db.query(Espacio).filter(Espacio.id == espacio_id).first()
-
-    if not espacio:
-        raise HTTPException(status_code=404, detail="Espacio no encontrado")
+    espacio = obtener_espacio_autorizado(db, espacio_id, usuario)
 
     # Verificar que no exista otro espacio con el mismo número
     espacio_existente = db.query(Espacio).filter(
@@ -238,8 +252,22 @@ async def editar_espacio(
             status_code=400
         )
 
+    error_tipo = validar_tipo_espacio(espacio.parqueadero, tipo, tipo_actual=espacio.tipo)
+    if error_tipo:
+        return templates.TemplateResponse(
+            "admin/espacio_form.html",
+            {
+                "request": request,
+                "titulo": "Editar Espacio",
+                "parqueadero": espacio.parqueadero,
+                "espacio": espacio,
+                "error": error_tipo
+            },
+            status_code=400
+        )
+
     espacio.numero = numero
-    espacio.tipo = tipo
+    espacio.tipo = tipo.strip().lower()
     espacio.estado = estado
 
     db.commit()
@@ -255,17 +283,13 @@ async def cambiar_estado_espacio(
     request: Request,
     espacio_id: int,
     estado: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Cambia el estado de un espacio (disponible/ocupado/mantenimiento).
     """
-    requerir_admin(request)
-
-    espacio = db.query(Espacio).filter(Espacio.id == espacio_id).first()
-
-    if not espacio:
-        raise HTTPException(status_code=404, detail="Espacio no encontrado")
+    espacio = obtener_espacio_autorizado(db, espacio_id, usuario)
 
     # Validar que el estado sea válido
     estados_validos = [e.value for e in EstadoEspacio]
@@ -285,17 +309,13 @@ async def cambiar_estado_espacio(
 async def eliminar_espacio(
     request: Request,
     espacio_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(gestor_espacios)
 ):
     """
     Elimina un espacio.
     """
-    requerir_admin(request)
-
-    espacio = db.query(Espacio).filter(Espacio.id == espacio_id).first()
-
-    if not espacio:
-        raise HTTPException(status_code=404, detail="Espacio no encontrado")
+    espacio = obtener_espacio_autorizado(db, espacio_id, usuario)
 
     parqueadero_id = espacio.parqueadero_id
 

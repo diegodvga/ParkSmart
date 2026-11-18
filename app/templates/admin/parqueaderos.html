@@ -19,8 +19,10 @@
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Dirección</th>
+                    <th>Ciudad</th>
                     <th>Tarifa Carro</th>
                     <th>Tarifa Moto</th>
+                    <th>Tarifa Bus</th>
                     <th>Capacidad</th>
                     <th>Horario</th>
                     <th>Estado</th>
@@ -33,17 +35,36 @@
                     <td>{{ p.id }}</td>
                     <td>{{ p.nombre }}</td>
                     <td>{{ p.direccion }}</td>
-                    <td>${{ "{:,.0f}".format(p.tarifa_hora_carro) }}</td>
-                    <td>${{ "{:,.0f}".format(p.tarifa_hora_moto) }}</td>
+                    <td>{{ p.ciudad }}</td>
+                    {% for tipo in ['carro', 'moto', 'bus'] %}
+                    <td>{{ "${:,.0f}".format(p.tarifa_para(tipo)) if p.tarifa_para(tipo) is not none else 'No acepta' }}</td>
+                    {% endfor %}
                     <td>{{ p.capacidad }}</td>
                     <td>{{ p.horario_apertura }} - {{ p.horario_cierre }}</td>
                     <td>
-                        <span class="badge badge-{{ 'success' if p.estado == 'activo' else 'secondary' }}">
-                            {{ p.estado }}
-                        </span>
+                       <span class="badge badge-{{ 'success' if p.estado == 'activo' else 'secondary' }}">
+    {{ 'ACTIVO' if p.estado == 'activo' else 'INACTIVO' }}
+</span>
                     </td>
                     <td class="actions">
-                        <a href="/parqueaderos/{{ p.id }}" class="btn btn-sm btn-info" title="Ver">Ver</a>
+                        {# El propietario ve su panel (sirve en cualquier estado). El catálogo
+                           público solo muestra parqueaderos activos: para el admin, "Ver"
+                           aparece solo si está activo (si no, daría 404). #}
+                        {% if request.session.get('usuario_rol') == 'propietario' %}
+                        <a href="/propietario/parqueaderos/{{ p.id }}" class="btn btn-sm btn-info" title="Ver">Ver</a>
+                        {% elif p.estado == 'activo' %}
+                        <a href="/parqueaderos/{{ p.id }}" class="btn btn-sm btn-info" title="Ver en el catálogo">Ver</a>
+                        {% endif %}
+                        {% if request.session.get('usuario_rol') == 'admin_global' and p.estado == 'pendiente' %}
+                        <form method="POST" action="/admin/parqueaderos/{{ p.id }}/aprobar" style="display: inline;">
+                            <input type="hidden" name="volver_a" value="/admin/parqueaderos">
+                            <button type="submit" class="btn btn-sm btn-success">Aprobar</button>
+                        </form>
+                        <form method="POST" action="/admin/parqueaderos/{{ p.id }}/rechazar" style="display: inline;" onsubmit="return confirm('¿Rechazar «{{ p.nombre }}»?');">
+                            <input type="hidden" name="volver_a" value="/admin/parqueaderos">
+                            <button type="submit" class="btn btn-sm btn-danger">Rechazar</button>
+                        </form>
+                        {% endif %}
                         <a href="/admin/parqueaderos/{{ p.id }}/espacios" class="btn btn-sm btn-success" title="Espacios">Espacios</a>
                         <a href="/admin/parqueaderos/{{ p.id }}/editar" class="btn btn-sm btn-warning" title="Editar">Editar</a>
                         <form method="POST" action="/admin/parqueaderos/{{ p.id }}/eliminar" style="display: inline;" onsubmit="return confirm('¿Estás seguro de eliminar este parqueadero?');">

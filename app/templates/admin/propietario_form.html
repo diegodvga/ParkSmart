@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="pf-contenedor">
+        <a href="/admin/usuarios" class="pf-volver">← Volver a usuarios</a>
+        <h1>Crear cuenta de propietario</h1>
+        <p class="pf-ayuda">
+            Solo el administrador crea cuentas de propietario. Define una contraseña inicial y entrégasela
+            al propietario por un canal privado (no por un grupo ni un correo compartido).
+        </p>
+
+        {% if error %}
+        <div class="pf-error" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/admin/usuarios/crear" class="pf-form">
+            <label for="nombre">Nombre completo *</label>
+            <input id="nombre" name="nombre" value="{{ valores.nombre or '' }}" required minlength="2" maxlength="100" autocomplete="off">
+
+            <label for="correo">Correo electrónico *</label>
+            <input id="correo" name="correo" type="email" value="{{ valores.correo or '' }}" required maxlength="150" autocomplete="off">
+
+            <label for="telefono">Teléfono *</label>
+            <input id="telefono" name="telefono" value="{{ valores.telefono or '' }}" required maxlength="20" inputmode="tel" autocomplete="off">
+
+            <label for="cedula">Número de cédula *</label>
+            <input id="cedula" name="cedula" value="{{ valores.cedula or '' }}" required
+                   inputmode="numeric" pattern="[0-9]{4,15}" maxlength="15" autocomplete="off"
+                   title="Solo dígitos, entre 4 y 15" aria-describedby="ayuda-cedula">
+            <p class="pf-ayuda" id="ayuda-cedula">Solo dígitos, sin puntos ni espacios.</p>
+
+            <label for="password">Contraseña inicial *</label>
+            <input id="password" name="password" type="password" required minlength="6" maxlength="100" autocomplete="new-password">
+
+            <label for="confirmar_password">Confirmar contraseña *</label>
+            <input id="confirmar_password" name="confirmar_password" type="password" required minlength="6" maxlength="100" autocomplete="new-password">
+
+            <div class="pf-acciones">
+                <a href="/admin/usuarios" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Crear propietario</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pf-contenedor {
+        max-width: 560px; margin: 0 auto; background: var(--color-surface);
+        border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem;
+    }
+    .pf-volver { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .pf-contenedor h1 { font-size: 1.5rem; margin: 0.75rem 0 0.25rem; }
+    .pf-ayuda { color: var(--color-text-light); font-size: 0.875rem; margin-bottom: 1rem; }
+    .pf-error {
+        background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+        border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;
+    }
+    .pf-form { display: flex; flex-direction: column; gap: 0.35rem; }
+    .pf-form label { font-weight: 600; font-size: 0.875rem; margin-top: 0.5rem; }
+    .pf-form input {
+        padding: 0.7rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font: inherit;
+    }
+    .pf-acciones { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
+</style>
+{% endblock %}

@@ -3,6 +3,7 @@
 {% block titulo %}{{ titulo }}{% endblock %}
 
 {% block contenido %}
+{% set v = valores or parqueadero %}
 <div class="container">
     <div class="form-container">
         <a href="/admin/parqueaderos" class="back-link">← Volver a parqueaderos</a>
@@ -21,7 +22,7 @@
                     type="text"
                     id="nombre"
                     name="nombre"
-                    value="{{ parqueadero.nombre if parqueadero else '' }}"
+                    value="{{ v.nombre if v else '' }}"
                     required
                     minlength="2"
                     maxlength="100"
@@ -34,7 +35,7 @@
                     type="text"
                     id="direccion"
                     name="direccion"
-                    value="{{ parqueadero.direccion if parqueadero else '' }}"
+                    value="{{ v.direccion if v else '' }}"
                     required
                     minlength="5"
                     maxlength="200"
@@ -48,48 +49,115 @@
                     name="descripcion"
                     rows="3"
                     maxlength="500"
-                >{{ parqueadero.descripcion if parqueadero else '' }}</textarea>
+                >{{ v.descripcion if v and v.descripcion else '' }}</textarea>
             </div>
 
+            {% if parqueadero %}
             <div class="form-group">
                 <label for="capacidad">Capacidad *</label>
                 <input
                     type="number"
                     id="capacidad"
                     name="capacidad"
-                    value="{{ parqueadero.capacidad if parqueadero else '' }}"
+                    value="{{ v.capacidad if v else '' }}"
                     required
                     min="1"
                 >
             </div>
+            {% endif %}
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="tarifa_hora_carro">Tarifa por hora - Carro *</label>
-                    <input
-                        type="number"
-                        id="tarifa_hora_carro"
-                        name="tarifa_hora_carro"
-                        value="{{ parqueadero.tarifa_hora_carro if parqueadero else '' }}"
-                        required
-                        min="0"
-                        step="100"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="tarifa_hora_moto">Tarifa por hora - Moto *</label>
-                    <input
-                        type="number"
-                        id="tarifa_hora_moto"
-                        name="tarifa_hora_moto"
-                        value="{{ parqueadero.tarifa_hora_moto if parqueadero else '' }}"
-                        required
-                        min="0"
-                        step="100"
-                    >
-                </div>
+            <div class="form-group">
+                <label for="ciudad">Ciudad *</label>
+                <select id="ciudad" name="ciudad" required>
+                    {% set ciudad_actual = v.ciudad if v and v.ciudad else 'Santa Marta' %}
+                    {% for c in ciudades %}
+                    <option value="{{ c }}" {{ 'selected' if c == ciudad_actual else '' }}>{{ c }}</option>
+                    {% endfor %}
+                </select>
             </div>
+
+            {% if not parqueadero %}
+            {# Creación: cuántos espacios hay de cada tipo; se numeran solos #}
+            <fieldset class="form-group tipos-vehiculo espacios-por-tipo">
+                <legend>Espacios y tarifa por hora *</legend>
+                <p class="form-ayuda">
+                    Indica cuántos espacios hay para cada tipo de vehículo (puede ser 0) y su tarifa.
+                    Se numeran automáticamente: motos M01, M02…; carros C01, C02…; buses B01, B02…
+                </p>
+                <div class="tipo-cantidad tipo-cantidad-encabezado" aria-hidden="true">
+                    <span>Tipo</span><span>Espacios</span><span>Tarifa por hora</span>
+                </div>
+                {% for plural, nombre, singular, prefijo in [('motos', 'Motos', 'moto', 'M'), ('carros', 'Carros', 'carro', 'C'), ('buses', 'Buses', 'bus', 'B')] %}
+                {% set campo_cantidad = 'cantidad_' + plural %}
+                {% set campo_tarifa = 'tarifa_hora_' + singular %}
+                <div class="tipo-cantidad">
+                    <label for="{{ campo_cantidad }}">{{ nombre }}</label>
+                    <input
+                        type="number"
+                        id="{{ campo_cantidad }}"
+                        name="{{ campo_cantidad }}"
+                        value="{{ v[campo_cantidad] if v and v[campo_cantidad] is not none else 0 }}"
+                        min="0"
+                        max="500"
+                        step="1"
+                        required
+                        data-tarifa="{{ campo_tarifa }}"
+                        data-prefijo="{{ prefijo }}"
+                        aria-label="Cantidad de espacios para {{ nombre|lower }}"
+                    >
+                    <input
+                        type="number"
+                        id="{{ campo_tarifa }}"
+                        name="{{ campo_tarifa }}"
+                        value="{{ v[campo_tarifa] if v and v[campo_tarifa] is not none else '' }}"
+                        min="0"
+                        step="100"
+                        placeholder="Tarifa por hora"
+                        aria-label="Tarifa por hora para {{ nombre|lower }}"
+                    >
+                </div>
+                {% endfor %}
+                <p class="form-ayuda" id="resumen-espacios" aria-live="polite"></p>
+            </fieldset>
+            {% else %}
+            <fieldset class="form-group tipos-vehiculo">
+                <legend>Vehículos que acepta y tarifa por hora *</legend>
+                <p class="form-ayuda">Marca al menos un tipo y fija su precio por hora.</p>
+                {% for tipo, nombre in [('carros', 'Carros'), ('motos', 'Motos'), ('buses', 'Buses')] %}
+                {% set singular = {'carros': 'carro', 'motos': 'moto', 'buses': 'bus'}[tipo] %}
+                {% set campo_tarifa = 'tarifa_hora_' + singular %}
+                {% if v %}
+                    {% set marcado = v['acepta_' + tipo] %}
+                    {% set tarifa = v[campo_tarifa] if v[campo_tarifa] is not none else '' %}
+                {% else %}
+                    {% set marcado = tipo != 'buses' %}
+                    {% set tarifa = '' %}
+                {% endif %}
+                <div class="tipo-vehiculo">
+                    <label class="checkbox">
+                        <input
+                            type="checkbox"
+                            name="acepta_{{ tipo }}"
+                            value="true"
+                            data-tarifa="{{ campo_tarifa }}"
+                            {{ 'checked' if marcado else '' }}
+                        >
+                        {{ nombre }}
+                    </label>
+                    <input
+                        type="number"
+                        id="{{ campo_tarifa }}"
+                        name="{{ campo_tarifa }}"
+                        value="{{ tarifa }}"
+                        min="0"
+                        step="100"
+                        placeholder="Tarifa por hora"
+                        aria-label="Tarifa por hora para {{ nombre|lower }}"
+                    >
+                </div>
+                {% endfor %}
+            </fieldset>
+            {% endif %}
 
             <div class="form-row">
                 <div class="form-group">
@@ -98,7 +166,7 @@
                         type="time"
                         id="horario_apertura"
                         name="horario_apertura"
-                        value="{{ parqueadero.horario_apertura if parqueadero else '08:00' }}"
+                        value="{{ v.horario_apertura if v else '08:00' }}"
                         required
                     >
                 </div>
@@ -109,18 +177,33 @@
                         type="time"
                         id="horario_cierre"
                         name="horario_cierre"
-                        value="{{ parqueadero.horario_cierre if parqueadero else '20:00' }}"
+                        value="{{ v.horario_cierre if v else '20:00' }}"
                         required
                     >
                 </div>
             </div>
 
-            {% if parqueadero %}
+            <div class="form-group">
+                <label for="margen_minutos">Margen entre reservas *</label>
+                {% set margen_actual = (v.margen_minutos if v and v.margen_minutos else 15)|string %}
+                <select id="margen_minutos" name="margen_minutos" required>
+                    <option value="10" {{ 'selected' if margen_actual == '10' else '' }}>10 minutos</option>
+                    <option value="15" {{ 'selected' if margen_actual == '15' else '' }}>15 minutos (recomendado)</option>
+                </select>
+                <p class="form-ayuda">
+                    Tiempo libre obligatorio entre una reserva y la siguiente en la misma plaza.
+                    {% if parqueadero %}Si lo cambias, aplica solo a las reservas nuevas.{% endif %}
+                </p>
+            </div>
+
+            {% if parqueadero and request.session.get('usuario_rol') == 'admin_global' %}
             <div class="form-group">
                 <label for="estado">Estado</label>
                 <select id="estado" name="estado" required>
+                    <option value="pendiente" {{ 'selected' if parqueadero.estado == 'pendiente' else '' }}>Pendiente</option>
                     <option value="activo" {{ 'selected' if parqueadero.estado == 'activo' else '' }}>Activo</option>
                     <option value="inactivo" {{ 'selected' if parqueadero.estado == 'inactivo' else '' }}>Inactivo</option>
+                    <option value="rechazado" {{ 'selected' if parqueadero.estado == 'rechazado' else '' }}>Rechazado</option>
                 </select>
             </div>
             {% endif %}
@@ -228,10 +311,129 @@
         border: 1px solid #fecaca;
     }
 
+    .tipos-vehiculo {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+
+    .tipos-vehiculo legend {
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0 0.25rem;
+    }
+
+    .form-ayuda {
+        font-size: 0.8rem;
+        color: var(--color-text-light, #6b7280);
+        margin: 0;
+    }
+
+    .tipo-vehiculo {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .tipo-vehiculo .checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .tipo-vehiculo input[type="number"]:disabled {
+        background: #f3f4f6;
+        cursor: not-allowed;
+    }
+
+    .tipo-cantidad {
+        display: grid;
+        grid-template-columns: 90px 110px 1fr;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .tipo-cantidad label {
+        font-weight: 500;
+    }
+
+    .tipo-cantidad-encabezado {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-text-light, #6b7280);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .tipo-cantidad input[type="number"]:disabled {
+        background: #f3f4f6;
+        cursor: not-allowed;
+    }
+
     @media (max-width: 600px) {
         .form-row {
             grid-template-columns: 1fr;
         }
+
+        .tipo-cantidad {
+            grid-template-columns: 70px 90px 1fr;
+            gap: 0.5rem;
+        }
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Activa la tarifa solo para los tipos de vehículo marcados
+    document.querySelectorAll('.tipos-vehiculo input[type="checkbox"]').forEach(function (casilla) {
+        const tarifa = document.getElementById(casilla.dataset.tarifa);
+        function actualizar() {
+            tarifa.disabled = !casilla.checked;
+            tarifa.required = casilla.checked;
+        }
+        casilla.addEventListener('change', actualizar);
+        actualizar();
+    });
+
+    // Creación: la tarifa se activa solo si ese tipo tiene espacios,
+    // y se muestra un resumen de los códigos que se van a generar
+    const cantidades = document.querySelectorAll('.espacios-por-tipo input[data-prefijo]');
+    const resumen = document.getElementById('resumen-espacios');
+
+    function codigo(prefijo, numero) {
+        return prefijo + String(numero).padStart(2, '0');
+    }
+
+    function actualizarEspacios() {
+        let total = 0;
+        const rangos = [];
+        cantidades.forEach(function (campo) {
+            const cantidad = Math.max(0, parseInt(campo.value, 10) || 0);
+            const tarifa = document.getElementById(campo.dataset.tarifa);
+            tarifa.disabled = cantidad === 0;
+            tarifa.required = cantidad > 0;
+            total += cantidad;
+            if (cantidad === 1) {
+                rangos.push(codigo(campo.dataset.prefijo, 1));
+            } else if (cantidad > 1) {
+                rangos.push(codigo(campo.dataset.prefijo, 1) + '–' + codigo(campo.dataset.prefijo, cantidad));
+            }
+        });
+        resumen.textContent = total > 0
+            ? 'Total: ' + total + ' espacio' + (total === 1 ? '' : 's') + ' (' + rangos.join(', ') + ')'
+            : 'Agrega al menos un espacio.';
+    }
+
+    cantidades.forEach(function (campo) {
+        campo.addEventListener('input', actualizarEspacios);
+    });
+    if (cantidades.length) {
+        actualizarEspacios();
+    }
+</script>
 {% endblock %}
