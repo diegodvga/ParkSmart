@@ -1,0 +1,3 @@
+{# Solo la cuadrícula de plazas: la pide el formulario de reserva cuando cambian fecha, horas o vehículo #}
+{% from "componentes/plazas.html" import grilla_plazas %}
+{{ grilla_plazas(plazas, leyenda, aviso=aviso_plazas) }}

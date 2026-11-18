@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+{% set r = reserva %}
+<div class="container">
+    <div class="pg-contenedor">
+        <a href="/mis-reservas" class="pg-volver">← Volver a mis reservas</a>
+        <h1>Pagar reserva</h1>
+        <p class="pg-simulada" role="note">Pasarela de pago de <strong>simulación</strong>: no se cobra dinero real.</p>
+
+        <section class="pg-resumen" aria-label="Resumen de la reserva">
+            <dl>
+                <dt>Parqueadero</dt><dd>{{ parqueadero.nombre }}</dd>
+                <dt>Plaza</dt><dd>{{ r.espacio.numero }}</dd>
+                <dt>Vehículo</dt><dd>{{ r.vehiculo.placa }}</dd>
+                <dt>Horario</dt><dd>{{ r.inicio|local('%d/%m/%Y') }} · {{ r.inicio|local('%H:%M') }} – {{ r.fin|local('%H:%M') }}</dd>
+            </dl>
+            {% if monto is not none %}
+            <p class="pg-monto">Total a pagar <strong>{{ "${:,.0f}".format(monto).replace(',', '.') }}</strong></p>
+            {% endif %}
+            {% if r.estado.value == 'pendiente' and r.pendiente_expira_en %}
+            <p class="pg-plazo">Tu plaza está apartada hasta las <strong>{{ r.pendiente_expira_en|local('%H:%M') }}</strong>. Si no pagas antes, la reserva se cancela.</p>
+            {% endif %}
+        </section>
+
+        {% if error %}
+        <div class="pg-error" role="alert">{{ error }}</div>
+        {% endif %}
+
+        {% if monto is not none %}
+        <div class="pg-medios" role="tablist" aria-label="Medio de pago">
+            <button type="button" role="tab" id="tab-tarjeta" aria-controls="panel-tarjeta"
+                    aria-selected="{{ 'false' if valores.metodo == 'transferencia' else 'true' }}">Tarjeta</button>
+            <button type="button" role="tab" id="tab-transferencia" aria-controls="panel-transferencia"
+                    aria-selected="{{ 'true' if valores.metodo == 'transferencia' else 'false' }}">Transferencia</button>
+        </div>
+
+        <form method="POST" action="/reservas/{{ r.id }}/pagar" class="pg-form" id="panel-tarjeta"
+              role="tabpanel" aria-labelledby="tab-tarjeta" autocomplete="off"
+              {{ 'hidden' if valores.metodo == 'transferencia' else '' }}>
+            <input type="hidden" name="metodo" value="tarjeta">
+            <input type="hidden" name="clave_idempotencia" value="{{ clave_pago }}">
+            <label for="titular">Nombre del titular *</label>
+            <input id="titular" name="titular" required maxlength="100" value="{{ valores.titular or '' }}">
+            <label for="numero_tarjeta">Número de tarjeta *</label>
+            <input id="numero_tarjeta" name="numero_tarjeta" required inputmode="numeric" maxlength="23"
+                   placeholder="4242 4242 4242 4242" autocomplete="off">
+            <div class="pg-fila">
+                <div>
+                    <label for="vencimiento">Vencimiento *</label>
+                    <input id="vencimiento" name="vencimiento" required placeholder="MM/AA" maxlength="5" autocomplete="off">
+                </div>
+                <div>
+                    <label for="cvv">CVV *</label>
+                    <input id="cvv" name="cvv" required inputmode="numeric" maxlength="4" autocomplete="off">
+                </div>
+            </div>
+            <p class="pg-ayuda">Tarjetas de prueba: <code>4242 4242 4242 4242</code> se aprueba ·
+                <code>4000 0000 0000 0002</code> se rechaza. Cualquier vencimiento futuro y CVV de 3 dígitos.</p>
+            <button type="submit" class="btn btn-primary pg-pagar">Pagar con tarjeta</button>
+        </form>
+
+        <form method="POST" action="/reservas/{{ r.id }}/pagar" class="pg-form" id="panel-transferencia"
+              role="tabpanel" aria-labelledby="tab-transferencia"
+              {{ '' if valores.metodo == 'transferencia' else 'hidden' }}>
+            <input type="hidden" name="metodo" value="transferencia">
+            <input type="hidden" name="clave_idempotencia" value="{{ clave_pago }}">
+            <label for="banco">Banco *</label>
+            <select id="banco" name="banco" required>
+                <option value="">Elige tu banco</option>
+                {% for valor, nombre in bancos %}
+                <option value="{{ valor }}" {{ 'selected' if valores.banco == valor else '' }}>{{ nombre }}</option>
+                {% endfor %}
+            </select>
+            <label for="documento">Documento del titular *</label>
+            <input id="documento" name="documento" required inputmode="numeric" maxlength="15">
+            <p class="pg-ayuda">Elige "Banco de prueba que rechaza" para simular una transferencia rechazada.</p>
+            <button type="submit" class="btn btn-primary pg-pagar">Pagar con transferencia</button>
+        </form>
+        {% else %}
+        <p><a href="/mis-reservas" class="btn btn-secondary">Ir a mis reservas</a></p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pg-contenedor {
+        max-width: 520px; margin: 0 auto; background: var(--color-surface);
+        border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.5rem;
+    }
+    .pg-volver { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .pg-contenedor h1 { font-size: 1.5rem; margin: 0.75rem 0 0.25rem; }
+    .pg-simulada { background: #fffbeb; color: #92400e; border-radius: var(--radius-md); padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+    .pg-resumen { margin: 1rem 0; }
+    .pg-resumen dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; font-size: 0.9rem; }
+    .pg-resumen dt { font-weight: 600; }
+    .pg-monto { font-size: 1.15rem; margin-top: 0.75rem; }
+    .pg-plazo, .pg-ayuda { color: var(--color-text-light); font-size: 0.8rem; }
+    .pg-error {
+        background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+        border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;
+    }
+    .pg-medios { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem; }
+    .pg-medios button {
+        background: none; border: none; border-bottom: 3px solid transparent; padding: 0.5rem 1rem;
+        font: inherit; font-weight: 600; color: var(--color-text-light); cursor: pointer;
+    }
+    .pg-medios button[aria-selected="true"] { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+    .pg-form { display: flex; flex-direction: column; gap: 0.35rem; }
+    .pg-form[hidden] { display: none; }
+    .pg-form label { font-weight: 600; font-size: 0.875rem; margin-top: 0.35rem; }
+    .pg-form input, .pg-form select { padding: 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font: inherit; }
+    .pg-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .pg-fila div { display: flex; flex-direction: column; gap: 0.35rem; }
+    .pg-pagar { margin-top: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const pestanas = document.querySelectorAll('.pg-medios [role="tab"]');
+        pestanas.forEach(pestana => pestana.addEventListener('click', () => {
+            pestanas.forEach(otra => {
+                const activa = otra === pestana;
+                otra.setAttribute('aria-selected', activa ? 'true' : 'false');
+                document.getElementById(otra.getAttribute('aria-controls')).hidden = !activa;
+            });
+        }));
+        // Evita el doble envío mientras el "banco" responde
+        document.querySelectorAll('.pg-form').forEach(formulario => formulario.addEventListener('submit', () => {
+            formulario.querySelector('.pg-pagar').disabled = true;
+        }));
+    })();
+</script>
+{% endblock %}

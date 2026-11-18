@@ -16,23 +16,19 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Vehiculo, TipoVehiculo
+from app.dependencies import requiere_rol
+from app.models import Vehiculo, TipoVehiculo, RolUsuario
 
 # Configurar templates
 templates = Jinja2Templates(directory="app/templates")
 
+# dependencies=[...] aplica requiere_rol a TODAS las rutas de este router:
+# solo los clientes registran vehículos.
 router = APIRouter(
     prefix="",
-    tags=["vehiculos"]
+    tags=["vehiculos"],
+    dependencies=[Depends(requiere_rol(RolUsuario.CLIENTE))]
 )
-
-
-def requerir_autenticacion(request: Request):
-    """
-    Verifica que el usuario esté autenticado.
-    """
-    if not request.session.get("usuario_id"):
-        raise HTTPException(status_code=401, detail="Debes iniciar sesión")
 
 
 # ============================================
@@ -47,8 +43,6 @@ async def listar_vehiculos(
     """
     Muestra la lista de vehículos del usuario autenticado.
     """
-    requerir_autenticacion(request)
-
     usuario_id = request.session.get("usuario_id")
 
     vehiculos = db.query(Vehiculo).filter(
@@ -72,8 +66,6 @@ async def formulario_crear_vehiculo(
     """
     Muestra el formulario para crear un vehículo.
     """
-    requerir_autenticacion(request)
-
     return templates.TemplateResponse(
         "vehiculo_form.html",
         {
@@ -95,8 +87,6 @@ async def crear_vehiculo(
     """
     Procesa la creación de un nuevo vehículo.
     """
-    requerir_autenticacion(request)
-
     usuario_id = request.session.get("usuario_id")
 
     # Verificar que no exista un vehículo con la misma placa
@@ -115,6 +105,10 @@ async def crear_vehiculo(
             },
             status_code=400
         )
+
+    tipo = tipo.strip().lower()
+    if tipo not in [t.value for t in TipoVehiculo]:
+        raise HTTPException(status_code=400, detail="Tipo de vehículo no válido")
 
     nuevo_vehiculo = Vehiculo(
         usuario_id=usuario_id,
@@ -141,8 +135,6 @@ async def formulario_editar_vehiculo(
     """
     Muestra el formulario para editar un vehículo.
     """
-    requerir_autenticacion(request)
-
     usuario_id = request.session.get("usuario_id")
 
     vehiculo = db.query(Vehiculo).filter(
@@ -175,8 +167,6 @@ async def editar_vehiculo(
     """
     Procesa la edición de un vehículo.
     """
-    requerir_autenticacion(request)
-
     usuario_id = request.session.get("usuario_id")
 
     vehiculo = db.query(Vehiculo).filter(
@@ -205,6 +195,10 @@ async def editar_vehiculo(
             status_code=400
         )
 
+    tipo = tipo.strip().lower()
+    if tipo not in [t.value for t in TipoVehiculo]:
+        raise HTTPException(status_code=400, detail="Tipo de vehículo no válido")
+
     vehiculo.placa = placa.upper()
     vehiculo.tipo = tipo
     vehiculo.marca = marca if marca else None
@@ -226,8 +220,6 @@ async def eliminar_vehiculo(
     """
     Elimina un vehículo.
     """
-    requerir_autenticacion(request)
-
     usuario_id = request.session.get("usuario_id")
 
     vehiculo = db.query(Vehiculo).filter(

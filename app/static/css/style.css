@@ -576,3 +576,121 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================
+   COMPONENTES COMPARTIDOS
+   Botones pequeños y de acción, etiquetas de estado (badges) y tablas de
+   datos. Están aquí para que TODAS las páginas los tengan; algunas
+   plantillas antiguas todavía los repiten en su <style>, con el mismo
+   aspecto.
+   ============================================ */
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #16a34a;
+}
+
+.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+.btn-info {
+    background-color: #06b6d4;
+    color: white;
+}
+
+.btn-warning {
+    background-color: var(--color-warning);
+    color: white;
+}
+
+/* Un botón secundario dentro de una tarjeta blanca necesita borde para verse */
+.table-container .btn-secondary,
+.data-table .btn-secondary {
+    border: 1px solid var(--color-border);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    background-color: var(--color-background);
+    color: var(--color-text-light);
+}
+
+.badge-primary   { background-color: #dbeafe; color: #1e40af; }
+.badge-secondary { background-color: #f1f5f9; color: #475569; }
+.badge-success   { background-color: #dcfce7; color: #166534; }
+.badge-warning   { background-color: #fef3c7; color: #92400e; }
+.badge-danger    { background-color: #fee2e2; color: #991b1b; }
+.badge-info      { background-color: #e0f2fe; color: #075985; }
+
+.table-container {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.data-table th {
+    background-color: var(--color-background);
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--color-background);
+}
+
+/* Texto solo para lectores de pantalla */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

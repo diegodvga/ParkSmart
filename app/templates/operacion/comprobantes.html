@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <a href="/operacion/parqueaderos/{{ parqueadero.id }}" class="op-volver">← Volver al panel</a>
+    <h1>Facturas · {{ parqueadero.nombre }}</h1>
+    <!-- <p class="op-ayuda">Facturas internas (no son facturas electrónicas DIAN): una por cada cobro.</p> -->
+
+    {% if comprobantes %}
+    {% set ns = namespace(total=0) %}
+    {% for c in comprobantes %}{% set ns.total = ns.total + (c.datos.valor_factura if c.datos.valor_factura is defined else c.datos.total) %}{% endfor %}
+    <p class="fc-resumen">
+        <span><strong>{{ comprobantes|length }}</strong> factura{{ 's' if comprobantes|length != 1 else '' }}</span>
+        <span><strong>{{ ns.total|pesos }}</strong> facturado</span>
+    </p>
+
+    <div class="fc-lista" role="table" aria-label="Facturas emitidas">
+        <div class="fc-fila fc-titulos" role="row">
+            <span role="columnheader">Factura</span>
+            <span role="columnheader">Concepto</span>
+            <span role="columnheader">Vehículo</span>
+            <span role="columnheader">Cliente</span>
+            <span role="columnheader" class="fc-num">Total</span>
+            <span role="columnheader"><span class="sr-only">Acciones</span></span>
+        </div>
+        {% for c in comprobantes %}
+        {% set d = c.datos %}
+        {% set anticipo = d.concepto == 'anticipado' %}
+        {% set fecha = d.emitido_en[8:10] ~ '/' ~ d.emitido_en[5:7] ~ '/' ~ d.emitido_en[:4] %}
+        <div class="fc-fila" role="row">
+            <div role="cell" data-etiqueta="Factura">
+                <strong class="fc-numero">Factura N.º {{ c.numero }}</strong>
+                <span class="fc-sub">{{ fecha }} · {{ c.emitido_en|hora_local }}</span>
+            </div>
+            <div role="cell" data-etiqueta="Concepto">
+                <span class="badge {{ 'badge-primary' if anticipo else 'badge-success' }}">{{ 'Anticipo' if anticipo else 'Cierre' }}</span>
+            </div>
+            <div role="cell" data-etiqueta="Vehículo">
+                <span class="fc-placa">{{ d.vehiculo.placa }}</span>
+                <span class="fc-sub">{{ d.vehiculo.tipo|capitalize }} · plaza {{ d.plaza or '—' }}</span>
+            </div>
+            <div role="cell" data-etiqueta="Cliente">
+                <span>{{ d.cliente.nombre or '—' }}</span>
+                <span class="fc-sub">Pagó con {{ d.metodo_pago or '—' }}</span>
+            </div>
+            <div role="cell" data-etiqueta="Total" class="fc-num">
+                <strong class="fc-valor">{{ (d.valor_factura if d.valor_factura is defined else d.total)|pesos }}</strong>
+            </div>
+            <div role="cell" class="fc-acciones">
+                <a href="/comprobantes/{{ c.id }}" class="btn btn-sm btn-primary">Ver factura</a>
+                <a href="/comprobantes/{{ c.id }}.json" class="btn btn-sm btn-secondary" title="Descargar datos en JSON">JSON</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="fc-vacio">
+        <p>Todavía no hay facturas emitidas.</p>
+        <p class="op-ayuda">Aparecen aquí cuando se cobra un pago anticipado o una salida.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>
+    .op-volver { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .container > h1 { margin: 0.75rem 0 0.25rem; }
+    .op-ayuda { color: var(--color-text-light); font-size: 0.85rem; margin-bottom: 1.25rem; }
+
+    /* Resumen y tarjetas de facturas */
+    .fc-resumen { display: flex; gap: 1.5rem; flex-wrap: wrap; color: var(--color-text-light); margin: 0.5rem 0 1.25rem; }
+    .fc-resumen strong { color: var(--color-text); font-size: 1.1rem; }
+    /* Lista de facturas: una fila por factura, columnas alineadas */
+    .fc-lista { display: flex; flex-direction: column; gap: 0.5rem; }
+    .fc-fila {
+        display: grid; align-items: center; gap: 1rem;
+        grid-template-columns: minmax(150px, 1.3fr) 100px minmax(140px, 1.2fr) minmax(150px, 1.4fr) 110px auto;
+        background: var(--color-surface); border: 1px solid var(--color-border);
+        border-radius: var(--radius-md); padding: 0.85rem 1.1rem; transition: var(--transition);
+    }
+    .fc-fila:not(.fc-titulos):hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+    .fc-fila > div { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+    .fc-titulos {
+        background: none; border: none; padding-top: 0; padding-bottom: 0.25rem;
+        font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--color-text-light);
+    }
+    .fc-numero { font-size: 0.95rem; }
+    .fc-sub { font-size: 0.8rem; color: var(--color-text-light); overflow-wrap: anywhere; }
+    .fc-placa {
+        align-self: flex-start; font-family: monospace; font-weight: 700; letter-spacing: 0.05em;
+        padding: 0.05rem 0.45rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+        background: var(--color-background);
+    }
+    .fc-fila .badge { align-self: flex-start; }
+    .fc-num { text-align: right; }
+    .fc-fila > .fc-num { align-items: flex-end; }
+    .fc-valor { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+    .fc-acciones { flex-direction: row !important; gap: 0.4rem; justify-content: flex-end; }
+    .fc-acciones .btn-secondary { border: 1px solid var(--color-border); }
+
+    /* Pantallas angostas: la fila se reparte en dos columnas con etiquetas */
+    @media (max-width: 860px) {
+        .fc-titulos { display: none; }
+        .fc-fila { grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
+        .fc-fila > div[data-etiqueta]::before {
+            content: attr(data-etiqueta); font-size: 0.68rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-light);
+        }
+        .fc-num, .fc-fila > .fc-num { text-align: left; align-items: flex-start; }
+        .fc-acciones { grid-column: 1 / -1; justify-content: flex-start; }
+    }
+    .fc-vacio {
+        background: var(--color-surface); border: 1px dashed var(--color-border);
+        border-radius: var(--radius-lg); padding: 2rem; text-align: center;
+    }
+    .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+</style>
+{% endblock %}

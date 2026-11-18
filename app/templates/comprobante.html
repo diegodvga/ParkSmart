@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+{% set d = comprobante.datos %}
+{# Las facturas anteriores a la migración 006 no traen "concepto": son de cierre #}
+{% set anticipo = d.concepto == 'anticipado' %}
+<div class="container">
+    {% if recien_pagado %}
+    <div class="recibo-exito no-imprimir" role="status">
+        <strong>Pago aprobado.</strong> Tu reserva quedó confirmada. Esta es tu factura.
+    </div>
+    {% endif %}
+    <article class="recibo">
+        <header>
+            <p class="recibo-tipo">Factura interna de ParkSmart </p>
+            <h1>Factura N.º {{ d.numero }}</h1>
+            <p class="recibo-concepto">{{ 'Pago anticipado de reserva' if anticipo else 'Servicio de parqueadero' }}</p>
+            <p><strong>{{ d.parqueadero.nombre }}</strong><br>{{ d.parqueadero.direccion }}</p>
+            <p class="recibo-meta">Emitida: {{ d.emitido_en[:10] }} {{ d.emitido_en[11:16] }}</p>
+        </header>
+
+        <dl class="recibo-datos">
+            <dt>Cliente</dt><dd>{{ d.cliente.nombre or '—' }}{% if d.cliente.telefono %} · {{ d.cliente.telefono }}{% endif %}</dd>
+            <dt>Vehículo</dt><dd>{{ d.vehiculo.placa }} ({{ d.vehiculo.tipo }})</dd>
+            <dt>Plaza</dt><dd>{{ d.plaza }}{{ ' · con reserva' if d.con_reserva else '' }}</dd>
+            {% if anticipo %}
+            {% if d.reserva %}
+            <dt>Horario reservado</dt><dd>{{ d.reserva.inicio[:10] }} · {{ d.reserva.inicio_texto }} – {{ d.reserva.fin_texto }}</dd>
+            {% endif %}
+            {% else %}
+            <dt>Entrada</dt><dd>{{ d.entrada[:10] }} {{ d.entrada_texto }}</dd>
+            <dt>Salida</dt><dd>{{ d.salida[:10] }} {{ d.salida_texto }}</dd>
+            {% endif %}
+        </dl>
+
+        {% if anticipo %}
+        <table class="recibo-tabla">
+            <tbody>
+                <tr><th scope="row">Reserva pagada por adelantado</th><td>{{ d.valor_factura|pesos }}</td></tr>
+                <tr class="recibo-total"><th scope="row">Total de esta factura</th><td>{{ d.valor_factura|pesos }}</td></tr>
+            </tbody>
+        </table>
+        <!-- <p class="recibo-meta">Si te quedas más tiempo del reservado, el tiempo extra se cobra al salir en otra factura.</p> -->
+        {% else %}
+        <table class="recibo-tabla">
+            <tbody>
+                <tr><th scope="row">Tiempo base ({{ d.tiempo_base.minutos }} min)</th><td>{{ d.tiempo_base.valor|pesos }}</td></tr>
+                <tr><th scope="row">Tiempo extra ({{ d.tiempo_extra.minutos }} min)</th><td>{{ d.tiempo_extra.valor|pesos }}</td></tr>
+                <tr><th scope="row">Recargo por tiempo extra</th><td>{{ d.penalizacion|pesos }}</td></tr>
+                <tr><th scope="row">Subtotal</th><td>{{ d.subtotal|pesos }}</td></tr>
+                <tr><th scope="row">Impuesto ({{ d.impuesto_pct }} %)</th><td>{{ d.impuesto|pesos }}</td></tr>
+                <tr class="recibo-total"><th scope="row">Total del servicio</th><td>{{ d.total|pesos }}</td></tr>
+                {% if d.facturas_previas %}
+                <tr><th scope="row">Ya facturado (factura{{ 's' if d.facturas_previas|length > 1 else '' }} N.º {{ d.facturas_previas|join(', ') }})</th><td>−{{ (d.total - d.valor_factura)|pesos }}</td></tr>
+                <tr class="recibo-total"><th scope="row">Total de esta factura</th><td>{{ d.valor_factura|pesos }}</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- <h2>Pagos</h2> -->
+        <!-- <ul class="recibo-pagos">
+            {% for p in d.pagos %}
+            <li><span>{{ p.tipo|replace('_', ' ')|capitalize }} · {{ p.metodo }}{% if p.referencia %} · ref. {{ p.referencia }}{% endif %}</span><span>{{ '−' if p.tipo == 'reembolso' else '' }}{{ p.monto|pesos }}</span></li>
+            {% endfor %}
+        </ul> -->
+        <!-- <p class="recibo-meta">Tarifa: {{ d.tarifa_hora|pesos }} por hora </p> -->
+
+        <p class="no-imprimir">
+            <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir</button>
+            <!-- <a href="/comprobantes/{{ comprobante.id }}.json" class="btn btn-secondary">Descargar JSON</a> -->
+        </p>
+    </article>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .recibo {
+        max-width: 480px; margin: 0 auto; background: var(--color-surface);
+        border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.5rem;
+    }
+    .recibo h1 { font-size: 1.4rem; margin: 0.25rem 0 0.25rem; }
+    .recibo-concepto { font-weight: 600; margin-bottom: 0.5rem; }
+    .recibo-exito {
+        max-width: 480px; margin: 0 auto 1rem; background: #f0fdf4; border: 1px solid #bbf7d0;
+        color: #166534; border-radius: var(--radius-md); padding: 0.75rem 1rem;
+    }
+    .recibo h2 { font-size: 1rem; margin: 1rem 0 0.4rem; }
+    .recibo-tipo, .recibo-meta { color: var(--color-text-light); font-size: 0.8rem; }
+    .recibo-datos { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; margin: 1rem 0; font-size: 0.9rem; }
+    .recibo-datos dt { font-weight: 600; }
+    .recibo-tabla { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .recibo-tabla th { text-align: left; font-weight: 400; }
+    .recibo-tabla td { text-align: right; font-variant-numeric: tabular-nums; }
+    .recibo-tabla th, .recibo-tabla td { padding: 0.35rem 0; border-bottom: 1px dashed var(--color-border); }
+    .recibo-total th, .recibo-total td { font-weight: 700; font-size: 1.05rem; border-bottom: none; }
+    .recibo-pagos { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+    .recibo-pagos li { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+    .no-imprimir { display: flex; gap: 0.5rem; margin-top: 1rem; }
+
+    /* Al imprimir: solo el recibo, sin navegación ni botones */
+    @media print {
+        .navbar, footer, .no-imprimir { display: none !important; }
+        body { background: #fff; }
+        .recibo { border: none; box-shadow: none; max-width: none; }
+    }
+</style>
+{% endblock %}

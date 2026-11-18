@@ -68,7 +68,7 @@
                 <span class="quick-icon">P</span>
                 <span class="quick-label">Parqueaderos</span>
             </a>
-            {% if request.session.get('usuario_id') %}
+            {% if request.session.get('usuario_rol') == 'cliente' %}
             <a href="/mis-vehiculos" class="quick-card">
                 <span class="quick-icon">V</span>
                 <span class="quick-label">Mis Vehículos</span>
@@ -77,12 +77,16 @@
                 <span class="quick-icon">R</span>
                 <span class="quick-label">Mis Reservas</span>
             </a>
-            {% if request.session.get('usuario_rol') == 'administrador' %}
+            {% elif request.session.get('usuario_rol') == 'propietario' %}
+            <a href="/propietario/panel" class="quick-card">
+                <span class="quick-icon">M</span>
+                <span class="quick-label">Mi Panel</span>
+            </a>
+            {% elif request.session.get('usuario_rol') == 'admin_global' %}
             <a href="/admin" class="quick-card quick-admin">
                 <span class="quick-icon">A</span>
                 <span class="quick-label">Dashboard</span>
             </a>
-            {% endif %}
             {% else %}
             <a href="/login" class="quick-card">
                 <span class="quick-icon">L</span>

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <h1>Entradas y salidas</h1>
+    <p class="op-ayuda">Elige el parqueadero donde vas a registrar vehículos.</p>
+
+    {% if parqueaderos %}
+    <ul class="op-lista">
+        {% for p in parqueaderos %}
+        <li>
+            <div>
+                <strong>{{ p.nombre }}</strong>
+                <span class="op-ayuda">{{ p.direccion }}</span>
+            </div>
+            {% if p.estado.value == 'activo' %}
+            <a href="/operacion/parqueaderos/{{ p.id }}" class="btn btn-primary">Abrir</a>
+            {% else %}
+            <span class="op-estado">{{ p.estado.value|capitalize }}: aún no recibe vehículos</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No tienes parqueaderos para operar.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .op-ayuda { color: var(--color-text-light); font-size: 0.875rem; display: block; }
+    .op-lista { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+    .op-lista li {
+        display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+        background: var(--color-surface); border: 1px solid var(--color-border);
+        border-radius: var(--radius-md); padding: 1rem;
+    }
+    .op-estado { color: var(--color-text-light); font-size: 0.875rem; }
+</style>
+{% endblock %}

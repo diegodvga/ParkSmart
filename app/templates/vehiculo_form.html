@@ -33,8 +33,9 @@
             <div class="form-group">
                 <label for="tipo">Tipo de vehículo *</label>
                 <select id="tipo" name="tipo" required>
-                    <option value="CARRO" {{ 'selected' if vehiculo and vehiculo.tipo == 'CARRO' else '' }}>Carro</option>
-                    <option value="MOTO" {{ 'selected' if vehiculo and vehiculo.tipo == 'MOTO' else '' }}>Moto</option>
+                    {% for tipo, nombre in [('carro', 'Carro'), ('moto', 'Moto'), ('bus', 'Bus')] %}
+                    <option value="{{ tipo }}" {{ 'selected' if vehiculo and vehiculo.tipo == tipo else '' }}>{{ nombre }}</option>
+                    {% endfor %}
                 </select>
             </div>
 

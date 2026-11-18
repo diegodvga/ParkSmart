@@ -67,7 +67,7 @@ async def index(request: Request, db: Session = Depends(get_db)):
     total_espacios = db.query(Espacio).count()
 
     total_usuarios = db.query(Usuario).filter(
-        Usuario.rol == RolUsuario.USUARIO.value
+        Usuario.rol == RolUsuario.CLIENTE.value
     ).count()
 
     total_reservas = db.query(Reserva).count()
@@ -86,10 +86,16 @@ async def index(request: Request, db: Session = Depends(get_db)):
 
 
 # Incluir routers de la aplicación
-from app.routers import auth, parqueaderos, espacios, vehiculos, reservas, admin
+from app.routers import (
+    auth, parqueaderos, espacios, vehiculos, reservas, admin, propietario, operacion, tareas, comprobantes,
+)
 app.include_router(auth.router)
 app.include_router(parqueaderos.router)
 app.include_router(espacios.router)
 app.include_router(vehiculos.router)
 app.include_router(reservas.router)
 app.include_router(admin.router)
+app.include_router(propietario.router)
+app.include_router(operacion.router)
+app.include_router(tareas.router)
+app.include_router(comprobantes.router)

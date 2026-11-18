@@ -1,99 +1,92 @@
 {% extends "base.html" %}
+{% from "componentes/plazas.html" import grilla_plazas, estilos_plazas %}
 
 {% block titulo %}{{ titulo }}{% endblock %}
 
 {% block contenido %}
 <div class="container">
-    <div class="form-container">
-        <a href="/parqueaderos/{{ parqueadero.id }}" class="back-link">← Volver al parqueadero</a>
-        <h1>Reservar Espacio</h1>
-
-        <div class="reserva-info">
-            <div class="info-item">
-                <span class="info-label">Parqueadero:</span>
-                <span class="info-value">{{ parqueadero.nombre }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Espacio:</span>
-                <span class="info-value">{{ espacio.numero }} ({{ espacio.tipo }})</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Tarifas:</span>
-                <span class="info-value">
-                    Carro: ${{ "{:,.0f}".format(parqueadero.tarifa_hora_carro) }}/hora |
-                    Moto: ${{ "{:,.0f}".format(parqueadero.tarifa_hora_moto) }}/hora
-                </span>
-            </div>
-        </div>
+    <div class="rv-contenedor">
+        <a href="{{ '/mis-reservas' if reserva else '/parqueaderos/' ~ parqueadero.id }}" class="rv-volver">
+            ← {{ 'Volver a mis reservas' if reserva else 'Volver al parqueadero' }}
+        </a>
+        <h1>{{ 'Modificar reserva' if reserva else 'Reservar una plaza' }}</h1>
+        <p class="rv-ayuda">
+            <strong>{{ parqueadero.nombre }}</strong> · {{ parqueadero.direccion }} ·
+            horario {{ parqueadero.horario_apertura }} – {{ parqueadero.horario_cierre }}<br>
+            {% for tipo, nombre in [('carro', 'Carro'), ('moto', 'Moto'), ('bus', 'Bus')] %}
+            {% if parqueadero.tarifa_para(tipo) is not none %}{{ nombre }}: ${{ "{:,.0f}".format(parqueadero.tarifa_para(tipo)).replace(',', '.') }}/hora{% if not loop.last %} · {% endif %}{% endif %}
+            {% endfor %}
+        </p>
 
         {% if error %}
-        <div class="alert alert-error">
-            {{ error }}
-        </div>
+        <div class="rv-error" role="alert">{{ error }}</div>
         {% endif %}
 
         {% if vehiculos %}
-        <form method="POST" action="/reservas/nueva/{{ espacio.id }}" class="admin-form">
-            <div class="form-group">
-                <label for="vehiculo_id">Selecciona tu vehículo *</label>
-                <select id="vehiculo_id" name="vehiculo_id" required>
-                    {% for v in vehiculos %}
-                    <option value="{{ v.id }}" data-tipo="{{ v.tipo }}">{{ v.placa }} - {{ v.tipo }}{% if v.marca %} ({{ v.marca }}){% endif %}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="fecha">Fecha *</label>
-                <input
-                    type="date"
-                    id="fecha"
-                    name="fecha"
-                    required
-                    min="{{ now }}"
-                >
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
+        <form method="POST" action="{{ accion }}" id="form-reserva" class="rv-form"
+              data-plazas="/parqueaderos/{{ parqueadero.id }}/reservar/plazas"
+              data-reserva="{{ reserva.id if reserva else '' }}">
+            <fieldset class="rv-campos">
+                <legend class="sr-only">Vehículo y horario</legend>
+                <div class="rv-campo">
+                    <label for="vehiculo_id">Vehículo *</label>
+                    <select id="vehiculo_id" name="vehiculo_id" required>
+                        {% for v in vehiculos %}
+                        <option value="{{ v.id }}" data-tipo="{{ v.tipo.value }}" {{ 'selected' if v.id == valores.vehiculo_id else '' }}>
+                            {{ v.placa }} · {{ v.tipo.value }}{% if v.marca %} ({{ v.marca }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="rv-campo">
+                    <label for="fecha">Fecha *</label>
+                    <input type="date" id="fecha" name="fecha" value="{{ valores.fecha }}" min="{{ hoy }}" required>
+                </div>
+                <div class="rv-campo">
                     <label for="hora_entrada">Hora de entrada *</label>
-                    <input
-                        type="time"
-                        id="hora_entrada"
-                        name="hora_entrada"
-                        required
-                        min="{{ parqueadero.horario_apertura }}"
-                        max="{{ parqueadero.horario_cierre }}"
-                    >
+                    <input type="time" id="hora_entrada" name="hora_entrada" value="{{ valores.hora_entrada }}" required>
                 </div>
-
-                <div class="form-group">
+                <div class="rv-campo">
                     <label for="hora_salida">Hora de salida *</label>
-                    <input
-                        type="time"
-                        id="hora_salida"
-                        name="hora_salida"
-                        required
-                        min="{{ parqueadero.horario_apertura }}"
-                        max="{{ parqueadero.horario_cierre }}"
-                    >
+                    <input type="time" id="hora_salida" name="hora_salida" value="{{ valores.hora_salida }}" required>
                 </div>
+            </fieldset>
+
+            <div id="contenedor-plazas" aria-live="polite">
+                {{ grilla_plazas(plazas, leyenda, aviso=aviso_plazas) }}
             </div>
 
-            <div class="price-preview">
-                <p><strong>Precio estimado:</strong> <span id="precio">$0</span></p>
-                <p class="price-note">Se calculará automáticamente según el vehículo y las horas</p>
-            </div>
+            <!-- <p class="rv-precio">Precio estimado: <strong id="precio">—</strong></p> -->
 
-            <div class="form-actions">
-                <a href="/parqueaderos/{{ parqueadero.id }}" class="btn btn-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Confirmar Reserva</button>
+            {% if not reserva %}
+            {% set forma = valores.forma_pago or 'digital' %}
+            <fieldset class="rv-pago">
+                <legend>¿Cómo vas a pagar? *</legend>
+                <label class="rv-opcion">
+                    <input type="radio" name="forma_pago" value="digital" {{ 'checked' if forma == 'digital' or parqueadero.pago_anticipado else '' }} required>
+                    <span><strong>Tarjeta o transferencia, ahora</strong><br>
+                    <small>Pagas en línea y tu reserva queda confirmada al instante. Tienes 15 minutos para pagar.</small></span>
+                </label>
+                {% if not parqueadero.pago_anticipado %}
+                <label class="rv-opcion">
+                    <input type="radio" name="forma_pago" value="efectivo" {{ 'checked' if forma == 'efectivo' else '' }}>
+                    <span><strong>Efectivo, al salir</strong><br>
+                    <small>Tu reserva queda confirmada y pagas en la caja del parqueadero cuando retires el vehículo.</small></span>
+                </label>
+                {% else %}
+                <p class="rv-nota">Este parqueadero exige pago anticipado: el efectivo no está disponible al reservar.</p>
+                {% endif %}
+            </fieldset>
+            {% endif %}
+
+            <div class="rv-acciones">
+                <a href="{{ '/mis-reservas' if reserva else '/parqueaderos/' ~ parqueadero.id }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">{{ 'Guardar cambios' if reserva else 'Reservar y continuar' }}</button>
             </div>
         </form>
         {% else %}
-        <div class="alert alert-warning">
-            <p>No tienes vehículos registrados.</p>
-            <a href="/mis-vehiculos/crear" class="btn btn-primary">Registrar vehículo</a>
+        <div class="rv-error">
+            No tienes vehículos registrados. <a href="/mis-vehiculos">Registra uno</a> para poder reservar.
         </div>
         {% endif %}
     </div>
@@ -101,198 +94,94 @@
 {% endblock %}
 
 {% block extra_css %}
+{{ estilos_plazas() }}
 <style>
-    .back-link {
-        display: inline-block;
-        margin-bottom: 1rem;
-        color: var(--color-primary);
-        text-decoration: none;
-        font-weight: 500;
+    .rv-contenedor {
+        max-width: 900px; margin: 0 auto; background: var(--color-surface);
+        border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.5rem;
     }
-
-    .back-link:hover {
-        text-decoration: underline;
+    .rv-volver { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .rv-contenedor h1 { font-size: 1.5rem; margin: 0.75rem 0 0.25rem; }
+    .rv-ayuda { color: var(--color-text-light); font-size: 0.875rem; margin-bottom: 1rem; }
+    .rv-error {
+        background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+        border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;
     }
-
-    .form-container {
-        max-width: 600px;
-        margin: 0 auto;
-        background: white;
-        padding: 2rem;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-md);
-    }
-
-    .form-container h1 {
-        margin-bottom: 1rem;
-        font-size: 1.5rem;
-    }
-
-    .reserva-info {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        padding: 1rem;
-        border-radius: var(--radius-md);
-        margin-bottom: 1.5rem;
-        border-left: 4px solid var(--color-primary);
-    }
-
-    .info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(37, 99, 235, 0.1);
-    }
-
-    .info-item:last-child {
-        border-bottom: none;
-    }
-
-    .info-label {
-        font-weight: 600;
-        color: var(--color-text-light);
-    }
-
-    .info-value {
-        color: var(--color-text);
-        text-align: right;
-    }
-
-    .admin-form {
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .form-group label {
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: var(--color-text);
-    }
-
-    .form-group input,
-    .form-group select {
-        padding: 0.75rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        font-size: 1rem;
-        font-family: inherit;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-        outline: none;
-        border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-
-    .price-preview {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        padding: 1rem;
-        border-radius: var(--radius-md);
-        text-align: center;
-        border: 1px solid #22c55e;
-    }
-
-    .price-preview p {
-        margin: 0;
-    }
-
-    #precio {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #166534;
-    }
-
-    .price-note {
-        font-size: 0.75rem;
-        color: var(--color-text-light);
-    }
-
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--color-border);
-    }
-
-    .alert {
-        padding: 0.75rem 1rem;
-        border-radius: var(--radius-md);
-        margin-bottom: 1rem;
-        font-size: 0.875rem;
-    }
-
-    .alert-error {
-        background-color: #fef2f2;
-        color: var(--color-danger);
-        border: 1px solid #fecaca;
-    }
-
-    .alert-warning {
-        background-color: #fffbeb;
-        color: #92400e;
-        border: 1px solid #f59e0b;
-    }
-
-    @media (max-width: 600px) {
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-    }
+    .rv-campos { border: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; }
+    .rv-campo { display: flex; flex-direction: column; gap: 0.25rem; }
+    .rv-campo label { font-weight: 600; font-size: 0.875rem; }
+    .rv-campo input, .rv-campo select { padding: 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font: inherit; }
+    /* La sección de plazas es la misma del panel del dueño */
+    .pp-seccion { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1.25rem; }
+    .pp-seccion h2 { font-size: 1.125rem; margin-bottom: 0.75rem; }
+    .rv-precio { margin-top: 1rem; }
+    .rv-pago { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-top: 1rem; display: grid; gap: 0.5rem; }
+    .rv-pago legend { font-weight: 600; font-size: 0.875rem; padding: 0 0.25rem; }
+    .rv-opcion { display: flex; gap: 0.6rem; align-items: flex-start; cursor: pointer; }
+    .rv-opcion input { margin-top: 0.3rem; }
+    .rv-opcion small, .rv-nota { color: var(--color-text-light); font-size: 0.8rem; }
+    .rv-acciones { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Tarifas según tipo de vehículo
-    const tarifas = {
-        CARRO: {{ parqueadero.tarifa_hora_carro }},
-        MOTO: {{ parqueadero.tarifa_hora_moto }}
-    };
+    (function () {
+        const formulario = document.getElementById('form-reserva');
+        if (!formulario) { return; }
+        const contenedor = document.getElementById('contenedor-plazas');
+        const campos = ['vehiculo_id', 'fecha', 'hora_entrada', 'hora_salida'].map(id => document.getElementById(id));
+        const tarifas = {{ {'carro': parqueadero.tarifa_para('carro'), 'moto': parqueadero.tarifa_para('moto'), 'bus': parqueadero.tarifa_para('bus')} | tojson }};
+        let pedidoActual = 0;
 
-    const vehiculoSelect = document.getElementById('vehiculo_id');
-    const horaEntradaInput = document.getElementById('hora_entrada');
-    const horaSalidaInput = document.getElementById('hora_salida');
-    const precioSpan = document.getElementById('precio');
-
-    function calcularPrecio() {
-        const vehiculo = vehiculoSelect.options[vehiculoSelect.selectedIndex];
-        const tipoVehiculo = vehiculo ? vehiculo.dataset.tipo : 'CARRO';
-        const tarifa = tarifas[tipoVehiculo] || tarifas.CARRO;
-
-        const entrada = horaEntradaInput.value;
-        const salida = horaSalidaInput.value;
-
-        if (entrada && salida) {
-            const entradaMinutos = parseInt(entrada.split(':')[0]) * 60 + parseInt(entrada.split(':')[1]);
-            const salidaMinutos = parseInt(salida.split(':')[0]) * 60 + parseInt(salida.split(':')[1]);
-
-            if (salidaMinutos > entradaMinutos) {
-                const horas = (salidaMinutos - entradaMinutos) / 60;
-                const precio = horas * tarifa;
-                precioSpan.textContent = '$' + precio.toLocaleString('es-CO', { maximumFractionDigits: 0 });
-            } else {
-                precioSpan.textContent = '$0';
-            }
+        function plazaElegida() {
+            const radio = contenedor.querySelector('input[name="espacio_id"]:checked');
+            return radio ? radio.value : '';
         }
-    }
 
-    vehiculoSelect.addEventListener('change', calcularPrecio);
-    horaEntradaInput.addEventListener('change', calcularPrecio);
-    horaSalidaInput.addEventListener('change', calcularPrecio);
+        // Recalcula la cuadrícula en el servidor para el vehículo y horario escritos
+        function actualizarPlazas() {
+            const parametros = new URLSearchParams();
+            campos.forEach(campo => parametros.set(campo.name, campo.value));
+            parametros.set('espacio_id', plazaElegida());
+            if (formulario.dataset.reserva) { parametros.set('reserva_id', formulario.dataset.reserva); }
+            const numero = ++pedidoActual;
+            fetch(formulario.dataset.plazas + '?' + parametros.toString(), { credentials: 'same-origin' })
+                .then(respuesta => respuesta.ok ? respuesta.text() : Promise.reject(respuesta.status))
+                .then(html => {
+                    if (numero === pedidoActual) {   // ignora respuestas viejas
+                        contenedor.innerHTML = html;
+                        marcarSeleccion();
+                    }
+                })
+                .catch(() => {
+                    contenedor.insertAdjacentHTML('afterbegin',
+                        '<p class="rv-error" role="alert">No se pudo actualizar la disponibilidad. Intenta de nuevo.</p>');
+                });
+            calcularPrecio();
+        }
+
+        // Resalta la tarjeta elegida (además del :has() del CSS, para navegadores viejos)
+        function marcarSeleccion() {
+            contenedor.querySelectorAll('.pp-elegible').forEach(tarjeta => {
+                tarjeta.classList.toggle('pp-seleccionada', tarjeta.querySelector('input').checked);
+            });
+        }
+
+        function calcularPrecio() {
+            const opcion = campos[0].options[campos[0].selectedIndex];
+            const tarifa = opcion ? tarifas[opcion.dataset.tipo] : null;
+            const [entrada, salida] = [campos[2].value, campos[3].value];
+            const precio = document.getElementById('precio');
+            if (!tarifa || !entrada || !salida) { precio.textContent = '—'; return; }
+            const minutos = (h) => parseInt(h.split(':')[0], 10) * 60 + parseInt(h.split(':')[1], 10);
+            const horas = (minutos(salida) - minutos(entrada)) / 60;
+            precio.textContent = horas > 0 ? '$' + Math.round(horas * tarifa).toLocaleString('es-CO') : '—';
+        }
+
+        campos.forEach(campo => campo.addEventListener('change', actualizarPlazas));
+        contenedor.addEventListener('change', marcarSeleccion);
+        calcularPrecio();
+    })();
 </script>
 {% endblock %}

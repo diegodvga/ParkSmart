@@ -1,0 +1,95 @@
+{#
+  Componente compartido: sección "Plazas".
+
+  Nació en el panel del dueño (propietario/parqueadero.html) y lo reutiliza
+  el formulario de reserva del cliente, para que los dos tengan el mismo
+  encabezado, leyenda de colores, cuadrícula adaptable y tarjetas.
+
+  Uso:
+    {% from "componentes/plazas.html" import grilla_plazas, estilos_plazas %}
+    {{ grilla_plazas(plazas, leyenda) }}        en el contenido
+    {{ estilos_plazas() }}                      en el bloque de CSS
+
+  Cada plaza es un diccionario con:
+    numero        código de la plaza (C01, M02...)
+    situacion     clave de color (libre, reserva, disponible, reservada...)
+    texto         línea principal bajo el código
+    detalle       línea secundaria opcional
+    seleccionable True = se puede elegir (tarjeta con radio "espacio_id")
+    id            id del espacio (solo si es seleccionable)
+    seleccionada  True = es la plaza elegida (se resalta)
+#}
+
+{% macro grilla_plazas(plazas, leyenda, titulo="Plazas", aviso=None) %}
+<section class="pp-seccion pp-seccion-plazas" id="seccion-plazas">
+    <h2>{{ titulo }}</h2>
+    <ul class="pp-leyenda" aria-label="Leyenda">
+        {% for clave, nombre in leyenda %}
+        <li><span class="pp-punto pp-{{ clave }}"></span> {{ nombre }}</li>
+        {% endfor %}
+    </ul>
+    {% if aviso %}<p class="pp-aviso-plazas" role="status">{{ aviso }}</p>{% endif %}
+    <div class="pp-plazas">
+        {% for p in plazas %}
+        {% if p.seleccionable %}
+        <label class="pp-plaza pp-{{ p.situacion }} pp-elegible{{ ' pp-seleccionada' if p.seleccionada else '' }}" data-numero="{{ p.numero }}" title="Elegir {{ p.numero }}">
+            <input type="radio" class="sr-only" name="espacio_id" value="{{ p.id }}" {{ 'checked' if p.seleccionada else '' }} required>
+            <strong>{{ p.numero }}</strong>
+            <span>{{ p.texto }}</span>
+            {% if p.detalle %}<span class="pp-sit">{{ p.detalle }}</span>{% endif %}
+        </label>
+        {% else %}
+        <div class="pp-plaza pp-{{ p.situacion }}" data-numero="{{ p.numero }}" title="{{ p.texto }}">
+            <strong>{{ p.numero }}</strong>
+            <span>{{ p.texto }}</span>
+            {% if p.detalle %}<span class="pp-sit">{{ p.detalle }}</span>{% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% endmacro %}
+
+{% macro estilos_plazas() %}
+<style>
+    /* Componente "Plazas" (prefijo pp-), compartido por el panel del dueño y la reserva */
+    .pp-leyenda { list-style: none; display: flex; flex-wrap: wrap; gap: 1rem; padding: 0; margin-bottom: 0.75rem; font-size: 0.8rem; }
+    .pp-leyenda li { display: flex; align-items: center; gap: 0.35rem; }
+    .pp-punto { width: 0.75rem; height: 0.75rem; border-radius: 3px; display: inline-block; border: 1px solid var(--color-border); }
+    .pp-plazas { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem; }
+    .pp-plaza {
+        border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.5rem;
+        display: flex; flex-direction: column; align-items: center; gap: 0.1rem; font-size: 0.8rem; min-height: 3.75rem;
+    }
+    .pp-plaza span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pp-sit { font-size: 0.7rem; color: var(--color-text-light); }
+    .pp-aviso-plazas { font-size: 0.85rem; color: var(--color-text-light); margin-bottom: 0.75rem; }
+
+    /* Estados del panel del dueño (ocupación física) */
+    .pp-libre { background: #f0fdf4; }
+    .pp-reserva { background: #dbeafe; }
+    .pp-directo { background: #fef3c7; }
+    .pp-mantenimiento { background: #e5e7eb; }
+    .pp-afectada { background: #fee2e2; border-color: #fca5a5; }
+
+    /* Estados de la reserva del cliente (agenda del horario elegido), misma paleta */
+    .pp-disponible { background: #f0fdf4; }
+    .pp-reservada { background: #dbeafe; color: var(--color-text-light); }
+    .pp-incompatible { background: #f8fafc; color: #94a3b8; border-style: dashed; }
+    .pp-sin_horario { background: #f8fafc; color: var(--color-text-light); }
+    .pp-seleccionada { background: var(--color-primary); color: #fff; border-color: var(--color-primary-dark, #1d4ed8); }
+    .pp-seleccionada .pp-sit { color: #e0e7ff; }
+
+    /* Solo las tarjetas elegibles son interactivas */
+    .pp-elegible { cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
+    .pp-elegible:hover { box-shadow: 0 0 0 2px var(--color-primary); }
+    .pp-elegible:focus-within { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+    .pp-elegible:has(input:checked) { background: var(--color-primary); color: #fff; border-color: var(--color-primary-dark, #1d4ed8); }
+    .pp-elegible:has(input:checked) .pp-sit { color: #e0e7ff; }
+
+    .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+</style>
+{% endmacro %}

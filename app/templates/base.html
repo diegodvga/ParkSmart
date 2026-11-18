@@ -16,15 +16,27 @@
                 <span class="logo-text">ParkSmart</span>
             </a>
             <ul class="nav-links">
+                {# El admin_global tiene su panel como inicio; los demás roles, la portada #}
+                {% if request.session.get('usuario_rol') == 'admin_global' %}
+                <li><a href="/admin">Inicio</a></li>
+                {% else %}
                 <li><a href="/">Inicio</a></li>
+                {% endif %}
                 <li><a href="/parqueaderos">Parqueaderos</a></li>
                 {% if request.session.get('usuario_id') %}
                     <li class="user-info">
                         <span class="user-name">{{ request.session.get('usuario_nombre', 'Usuario') }}</span>
                     </li>
-                    <li><a href="/mis-reservas">Mis Reservas</a></li>
-                    <li><a href="/mis-vehiculos">Mis Vehículos</a></li>
-                    {% if request.session.get('usuario_rol') == 'administrador' %}
+                    {% set rol = request.session.get('usuario_rol') %}
+                    {% if rol == 'cliente' %}
+                        <li><a href="/mis-reservas">Mis Reservas</a></li>
+                        <li><a href="/mis-vehiculos">Mis Vehículos</a></li>
+                    {% elif rol == 'propietario' %}
+                        <li><a href="/propietario/panel">Mi Panel</a></li>
+                        <li><a href="/operacion">Operación</a></li>
+                    {% elif rol == 'operario' %}
+                        <li><a href="/operacion">Operación</a></li>
+                    {% elif rol == 'admin_global' %}
                         <li><a href="/admin">Admin</a></li>
                     {% endif %}
                     <li><a href="/logout" class="btn-logout">Cerrar Sesión</a></li>
@@ -52,7 +64,7 @@
                 <div class="footer-section">
                     <h4>Enlaces</h4>
                     <ul>
-                        <li><a href="/">Inicio</a></li>
+                        <li><a href="{{ '/admin' if request.session.get('usuario_rol') == 'admin_global' else '/' }}">Inicio</a></li>
                         <li><a href="/parqueaderos">Parqueaderos</a></li>
                         <li><a href="/login">Iniciar Sesión</a></li>
                     </ul>

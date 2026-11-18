@@ -27,9 +27,9 @@
                 <tr>
                     <td><strong>{{ v.placa }}</strong></td>
                     <td>
-                        <span class="badge badge-{{ 'primary' if v.tipo == 'carro' else 'secondary' }}">
-                            {{ v.tipo }}
-                        </span>
+                     <span class="badge badge-{{ 'primary' if v.tipo == 'carro' else 'secondary' }}">
+    {{ 'MOTO' if v.tipo == 'moto' else 'CARRO' if v.tipo == 'carro' else 'BUS' if v.tipo == 'bus' else v.tipo | upper }}
+</span>
                     </td>
                     <td>{{ v.marca or 'Sin marca' }}</td>
                     <td class="actions">

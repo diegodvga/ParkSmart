@@ -23,13 +23,17 @@
                 <span class="info-value">{{ parqueadero.descripcion or 'Sin descripción' }}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Tarifa Carro:</span>
-                <span class="info-value">${{ "{:,.0f}".format(parqueadero.tarifa_hora_carro) }}/hora</span>
+                <span class="info-label">Ciudad:</span>
+                <span class="info-value">{{ parqueadero.ciudad }}</span>
             </div>
+            {% for tipo, nombre in [('carro', 'Carro'), ('moto', 'Moto'), ('bus', 'Bus')] %}
+            {% if parqueadero.tarifa_para(tipo) is not none %}
             <div class="info-row">
-                <span class="info-label">Tarifa Moto:</span>
-                <span class="info-value">${{ "{:,.0f}".format(parqueadero.tarifa_hora_moto) }}/hora</span>
+                <span class="info-label">Tarifa {{ nombre }}:</span>
+                <span class="info-value">${{ "{:,.0f}".format(parqueadero.tarifa_para(tipo)) }}/hora</span>
             </div>
+            {% endif %}
+            {% endfor %}
             <div class="info-row">
                 <span class="info-label">Horario:</span>
                 <span class="info-value">{{ parqueadero.horario_apertura }} - {{ parqueadero.horario_cierre }}</span>
@@ -64,18 +68,12 @@
     <div class="detail-actions">
         {% if espacios %}
             {% if request.session.get('usuario_id') %}
-                <h3 class="reservation-title">Selecciona un espacio para reservar:</h3>
-                <div class="reservation-grid">
-                    {% for espacio in espacios %}
-                        {% if espacio.estado == 'disponible' %}
-                        <a href="/reservas/nueva/{{ espacio.id }}" class="reservation-card">
-                            <span class="reservation-number">{{ espacio.numero }}</span>
-                            <span class="reservation-type">{{ espacio.tipo }}</span>
-                            <span class="reservation-status">Disponible</span>
-                        </a>
-                        {% endif %}
-                    {% endfor %}
-                </div>
+                {% if request.session.get('usuario_rol') == 'cliente' %}
+                <h3 class="reservation-title">Elige tu horario y la plaza que quieras:</h3>
+                <a href="/parqueaderos/{{ parqueadero.id }}/reservar" class="btn btn-primary btn-lg">Reservar una plaza</a>
+                {% else %}
+                <p class="reservation-title">Las reservas las hacen las cuentas de cliente.</p>
+                {% endif %}
             {% else %}
             <div class="login-prompt">
                 <p>Para reservar un espacio, necesitas iniciar sesión.</p>

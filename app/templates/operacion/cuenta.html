@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="op-cuenta">
+        <a href="/operacion/parqueaderos/{{ parqueadero.id }}" class="op-volver">← Volver al panel</a>
+        <h1>Cobro de {{ estancia.placa }}</h1>
+        <p class="op-ayuda">
+            {{ parqueadero.nombre }} · plaza {{ estancia.espacio.numero }} ·
+            {{ 'con reserva' if estancia.reserva_id else 'sin reserva' }}<br>
+            Entrada {{ estancia.entrada_en|hora_local }} · Salida {{ estancia.salida_en|hora_local }}
+        </p>
+
+        <table class="op-desglose">
+            <tbody>
+                <tr>
+                    <th scope="row">Tiempo base ({{ cuenta.minutos_base }} min{{ ', reservado' if estancia.reserva_id else '' }})</th>
+                    <td>{{ cuenta.valor_base|pesos }}</td>
+                </tr>
+                {% if cuenta.minutos_extra %}
+                <tr>
+                    <th scope="row">Tiempo extra ({{ cuenta.minutos_extra }} min)</th>
+                    <td>{{ cuenta.valor_extra|pesos }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Recargo por tiempo extra</th>
+                    <td>{{ cuenta.penalizacion|pesos }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th scope="row">Subtotal</th>
+                    <td>{{ cuenta.subtotal|pesos }}</td>
+                </tr>
+                {% if cuenta.impuesto_pct %}
+                <tr>
+                    <th scope="row">Impuesto ({{ cuenta.impuesto_pct|round(2) }} %)</th>
+                    <td>{{ cuenta.impuesto|pesos }}</td>
+                </tr>
+                {% endif %}
+                <tr class="op-total">
+                    <th scope="row">Total</th>
+                    <td>{{ cuenta.total|pesos }}</td>
+                </tr>
+                <tr class="op-saldo">
+                    <th scope="row">Saldo pendiente</th>
+                    <td>{{ saldo|pesos }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="op-ayuda">Tarifa aplicada: {{ cuenta.tarifa_hora|pesos }} por hora, en fracciones de 15 minutos.</p>
+
+        {% for aviso in avisos %}
+        <div class="op-aviso op-aviso-{{ aviso.tipo }}" role="{{ 'alert' if aviso.tipo == 'error' else 'status' }}">{{ aviso.texto }}</div>
+        {% endfor %}
+
+        {% if pagos %}
+        <h2 class="op-subtitulo">Pagos</h2>
+        <ul class="op-pagos">
+            {% for p in pagos %}
+            <li>
+                <span>{{ p.tipo.value|replace('_', ' ')|capitalize }} · {{ p.metodo.value }} · {{ p.estado.value }}</span>
+                <span>{{ '−' if p.tipo.value == 'reembolso' else '' }}{{ p.monto|pesos }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if facturas %}
+        <p class="op-aviso op-aviso-exito">
+            {{ 'Pagado.' if saldo <= 0 else 'Facturado hasta ahora:' }}
+            {% for f in facturas %}
+            <a href="/comprobantes/{{ f.id }}">Factura N.º {{ f.numero }}</a>{{ ' (anticipo)' if f.pago_id else '' }}{{ ' · ' if not loop.last else '' }}
+            {% endfor %}
+        </p>
+        {% endif %}
+        {% if saldo > 0 %}
+        <h2 class="op-subtitulo">Registrar pago</h2>
+        <form method="POST" action="/operacion/parqueaderos/{{ parqueadero.id }}/cuentas/{{ cuenta.id }}/pagos" class="op-form-pago">
+            <input type="hidden" name="clave_idempotencia" value="{{ clave_pago }}">
+            <label for="monto">Monto</label>
+            <input id="monto" name="monto" type="number" min="1" max="{{ saldo|int }}" step="1" value="{{ saldo|int }}" required>
+            <label for="metodo">Método</label>
+            <select id="metodo" name="metodo">
+                {% for m in metodos %}<option value="{{ m.value }}">{{ m.value|capitalize }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Registrar pago</button>
+        </form>
+        <p class="op-ayuda">Puedes cobrar una parte: el resto queda como saldo pendiente.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .op-cuenta {
+        max-width: 560px; margin: 0 auto; background: var(--color-surface);
+        border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.5rem;
+    }
+    .op-volver { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .op-cuenta h1 { font-size: 1.5rem; margin: 0.75rem 0 0.25rem; }
+    .op-ayuda { color: var(--color-text-light); font-size: 0.875rem; }
+    .op-desglose { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .op-desglose th { text-align: left; font-weight: 500; }
+    .op-desglose td { text-align: right; font-variant-numeric: tabular-nums; }
+    .op-desglose th, .op-desglose td { padding: 0.5rem 0; border-bottom: 1px solid var(--color-border); }
+    .op-total th, .op-total td { font-weight: 700; font-size: 1.125rem; }
+    .op-saldo th, .op-saldo td { color: #991b1b; font-weight: 600; border-bottom: none; }
+    .op-subtitulo { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; }
+    .op-pagos { list-style: none; padding: 0; margin: 0; }
+    .op-pagos li { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid var(--color-border); font-size: 0.9rem; }
+    .op-form-pago { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 0.75rem; align-items: center; }
+    .op-form-pago input, .op-form-pago select { padding: 0.55rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font: inherit; }
+    .op-form-pago button { grid-column: 1 / -1; }
+    .op-aviso { padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-top: 0.75rem; border: 1px solid; }
+    .op-aviso-exito { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .op-aviso-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .op-aviso-advertencia { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+</style>
+{% endblock %}

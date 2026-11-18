@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <a href="/operacion" class="op-volver">← Mis parqueaderos</a>
+    <h1>{{ parqueadero.nombre }}</h1>
+    <p class="op-ayuda">
+        Hora actual: {{ ahora|hora_local }} · Margen entre reservas: {{ parqueadero.margen_minutos }} min ·
+        <a href="/operacion/parqueaderos/{{ parqueadero.id }}/comprobantes">Facturas</a>
+    </p>
+
+    {% for aviso in avisos %}
+    <div class="op-aviso op-aviso-{{ aviso.tipo }}" role="{{ 'alert' if aviso.tipo == 'error' else 'status' }}">{{ aviso.texto }}</div>
+    {% endfor %}
+
+    {% if parqueadero.estado.value != 'activo' %}
+    <div class="op-aviso op-aviso-advertencia">Este parqueadero está {{ parqueadero.estado.value }}: no puede registrar entradas.</div>
+    {% endif %}
+
+    <!-- Alertas: incidencias abiertas (exceso, retraso, sin alternativa) -->
+    <section class="op-seccion">
+        <h2>Alertas ({{ alertas|length }})</h2>
+        {% if alertas %}
+        <ul class="op-filas">
+            {% for i in alertas %}
+            <li class="op-alerta op-alerta-{{ i.tipo.value }}">
+                <div>
+                    <strong>{{ {'exceso': 'Tiempo excedido', 'retraso': 'Retraso', 'sin_alternativa': 'Sin plaza alternativa', 'reasignacion': 'Reasignación'}[i.tipo.value] }}</strong>
+                    <span class="op-ayuda">{{ i.detalle }} · desde {{ i.creado_en|hora_local }}</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="op-ayuda">Sin alertas.</p>
+        {% endif %}
+    </section>
+
+    <!-- Plazas -->
+    <section class="op-seccion">
+        <h2>Plazas</h2>
+        <ul class="op-leyenda" aria-label="Leyenda">
+            <li><span class="op-punto libre"></span> Libre</li>
+            <li><span class="op-punto reserva"></span> Ocupada con reserva</li>
+            <li><span class="op-punto directo"></span> Ocupada sin reserva</li>
+            <li><span class="op-punto mantenimiento"></span> Mantenimiento</li>
+        </ul>
+        <div class="op-plazas">
+            {% for p in plazas %}
+            <div class="op-plaza {{ p.situacion }}" title="{{ p.estancia.placa if p.estancia else p.situacion }}">
+                <strong>{{ p.espacio.numero }}</strong>
+                <span>{{ p.estancia.placa if p.estancia else {'libre': 'Libre', 'mantenimiento': 'Mant.'}.get(p.situacion, '') }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="op-columnas">
+        <!-- Ingreso directo -->
+        <section class="op-seccion">
+            <h2>Ingreso sin reserva</h2>
+            <form method="POST" action="/operacion/parqueaderos/{{ parqueadero.id }}/ingreso-directo" class="op-form">
+                <label for="placa">Placa *</label>
+                <input id="placa" name="placa" required maxlength="12" autocomplete="off" placeholder="ABC123">
+
+                <label for="tipo">Tipo de vehículo *</label>
+                <select id="tipo" name="tipo" required>
+                    {% for t in tipos %}
+                    <option value="{{ t.value }}">{{ t.value|capitalize }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="nombre">Nombre del conductor</label>
+                <input id="nombre" name="nombre" maxlength="100">
+
+                <label for="telefono">Teléfono</label>
+                <input id="telefono" name="telefono" maxlength="20" inputmode="tel">
+
+                <label for="espacio_id">Plaza</label>
+                <select id="espacio_id" name="espacio_id">
+                    <option value="">Asignar automáticamente</option>
+                    {% for p in plazas if p.situacion == 'libre' %}
+                    <option value="{{ p.espacio.id }}">{{ p.espacio.numero }} · {{ p.espacio.tipo.value }}</option>
+                    {% endfor %}
+                </select>
+                <p class="op-ayuda">Elige una plaza libre del mismo tipo que el vehículo, o deja que el sistema la asigne.</p>
+
+                <label for="salida_estimada">Salida estimada (hoy)</label>
+                <input id="salida_estimada" name="salida_estimada" type="time">
+                <p class="op-ayuda">Si la indicas, solo se asigna una plaza que quede libre a tiempo para su próxima reserva.</p>
+
+                <button type="submit" class="btn btn-primary">Registrar entrada</button>
+            </form>
+        </section>
+
+        <!-- Reservas de hoy -->
+        <section class="op-seccion">
+            <h2>Reservas de hoy</h2>
+            {% if reservas_hoy %}
+            <ul class="op-filas">
+                {% for r in reservas_hoy %}
+                <li>
+                    <div>
+                        <strong>{{ r.espacio.numero }}</strong> · {{ r.vehiculo.placa }}
+                        <span class="op-ayuda">{{ r.inicio|hora_local }} – {{ r.fin|hora_local }} · {{ r.estado.value|replace('_', ' ') }}</span>
+                    </div>
+                    {% if r.estado.value == 'confirmada' %}
+                    <form method="POST" action="/operacion/parqueaderos/{{ parqueadero.id }}/reservas/{{ r.id }}/entrada">
+                        <button type="submit" class="btn btn-secondary">Registrar entrada</button>
+                    </form>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="op-ayuda">No hay reservas para hoy.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <div class="op-columnas">
+        <!-- Cobros pendientes -->
+        <section class="op-seccion">
+            <h2>Saldos pendientes ({{ cuentas_con_saldo|length }})</h2>
+            {% if cuentas_con_saldo %}
+            <ul class="op-filas">
+                {% for c, debe in cuentas_con_saldo %}
+                <li>
+                    <div>
+                        <strong>{{ c.estancia.placa }}</strong> · debe {{ debe|pesos }}
+                        <span class="op-ayuda">Salió {{ c.liquidada_en|hora_local }} · total {{ c.total|pesos }}</span>
+                    </div>
+                    <a href="/operacion/parqueaderos/{{ parqueadero.id }}/estancias/{{ c.estancia_id }}/cuenta" class="btn btn-secondary">Cobrar</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="op-ayuda">No hay saldos pendientes.</p>
+            {% endif %}
+        </section>
+
+        <!-- Reservas que esperan pago anticipado -->
+        <section class="op-seccion">
+            <h2>Pagos anticipados pendientes ({{ pendientes_pago|length }})</h2>
+            {% if pendientes_pago %}
+            <ul class="op-filas">
+                {% for r in pendientes_pago %}
+                <li>
+                    <div>
+                        <strong>{{ r.vehiculo.placa }}</strong> · {{ r.espacio.numero }} · {{ r.total|pesos }}
+                        <span class="op-ayuda">{{ r.inicio|hora_local }} – {{ r.fin|hora_local }}
+                            {% if r.pendiente_expira_en %}· aparta hasta {{ r.pendiente_expira_en|hora_local }}{% endif %}</span>
+                    </div>
+                    <form method="POST" action="/operacion/parqueaderos/{{ parqueadero.id }}/reservas/{{ r.id }}/pago-anticipado" class="op-form-linea">
+                        <input type="hidden" name="clave_idempotencia" value="{{ nueva_clave() }}">
+                        <label for="metodo-r{{ r.id }}" class="sr-only">Método</label>
+                        <select id="metodo-r{{ r.id }}" name="metodo">
+                            {% for m in metodos %}<option value="{{ m.value }}">{{ m.value|capitalize }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-secondary">Registrar pago</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="op-ayuda">Ninguna reserva espera pago.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- Vehículos dentro -->
+    <section class="op-seccion">
+        <h2>Vehículos dentro ({{ dentro|length }})</h2>
+        {% if dentro %}
+        <ul class="op-filas">
+            {% for e in dentro %}
+            <li>
+                <div>
+                    <strong>{{ e.placa }}</strong> · plaza {{ e.espacio.numero }} · {{ 'con reserva' if e.reserva_id else 'sin reserva' }}
+                    <span class="op-ayuda">
+                        Entró {{ e.entrada_en|hora_local }}
+                        {% if e.salida_estimada %}· sale aprox. {{ e.salida_estimada|hora_local }}{% endif %}
+                        {% if e.nombre_conductor %}· {{ e.nombre_conductor }}{% endif %}
+                    </span>
+                </div>
+                <form method="POST" action="/operacion/parqueaderos/{{ parqueadero.id }}/estancias/{{ e.id }}/salida">
+                    <button type="submit" class="btn btn-primary">Registrar salida</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="op-ayuda">No hay vehículos dentro.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .op-volver { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .op-ayuda { color: var(--color-text-light); font-size: 0.875rem; }
+    .op-seccion {
+        background: var(--color-surface); border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1.25rem;
+    }
+    .op-seccion h2 { font-size: 1.125rem; margin-bottom: 0.75rem; }
+    .op-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .op-columnas .op-seccion { margin-top: 1.25rem; }
+
+    .op-aviso { padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-top: 0.75rem; border: 1px solid; }
+    .op-aviso-exito { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .op-aviso-advertencia { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .op-aviso-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+
+    .op-leyenda { list-style: none; display: flex; flex-wrap: wrap; gap: 1rem; padding: 0; margin-bottom: 0.75rem; font-size: 0.8rem; }
+    .op-leyenda li { display: flex; align-items: center; gap: 0.35rem; }
+    .op-punto { width: 0.75rem; height: 0.75rem; border-radius: 3px; display: inline-block; border: 1px solid var(--color-border); }
+
+    .op-plazas { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 0.5rem; }
+    .op-plaza {
+        border: 1px solid var(--color-border); border-radius: var(--radius-md);
+        padding: 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+        font-size: 0.8rem; min-height: 3.5rem; justify-content: center;
+    }
+    .op-plaza span { overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
+    .libre { background: #f0fdf4; }
+    .reserva { background: #dbeafe; }
+    .directo { background: #fef3c7; }
+    .mantenimiento { background: #e5e7eb; color: var(--color-text-light); }
+
+    .op-form { display: flex; flex-direction: column; gap: 0.35rem; }
+    .op-form label { font-weight: 600; font-size: 0.875rem; margin-top: 0.4rem; }
+    .op-form input, .op-form select {
+        padding: 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font: inherit;
+    }
+    .op-form button { margin-top: 0.75rem; }
+
+    .op-filas { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    .op-filas li {
+        display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+        border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;
+    }
+    .op-filas .op-ayuda { display: block; }
+    .op-form-linea { display: flex; gap: 0.4rem; align-items: center; }
+    .op-form-linea select { padding: 0.45rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    .op-alerta { border-left: 4px solid var(--color-warning); padding-left: 0.75rem; }
+    .op-alerta-sin_alternativa, .op-alerta-retraso { border-left-color: var(--color-danger); }
+
+    @media (max-width: 760px) {
+        .op-columnas { grid-template-columns: 1fr; }
+        .op-filas li { flex-direction: column; align-items: flex-start; }
+    }
+</style>
+{% endblock %}
